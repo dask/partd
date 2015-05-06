@@ -27,7 +27,7 @@ Partd supports four operations
         >>> get('/path/to/partd-file/', ['y', 'x'])
         [b'123456', b'Hello world!']
 
-4.  ``destroy``:  Destroy up partd dataset::
+4.  ``destroy``:  Destroy partd dataset::
 
         >>> destroy('/path/to/partd-file')
 
