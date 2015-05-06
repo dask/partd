@@ -7,6 +7,10 @@ from . import core
 from .compatibility import StringIO, pickle
 
 
+create = core.create
+destroy = core.destroy
+
+
 def multi_loads(data):
     """ Load a sequence of pickled lists stored in one string
 
@@ -33,4 +37,3 @@ def put(path, data, protocol=pickle.HIGHEST_PROTOCOL, put=core.put):
 def get(path, keys, get=core.get):
     """ Retrieve Python lists from store """
     return list(map(multi_loads, get(path, keys)))
-

@@ -1,5 +1,5 @@
-from partd.pickle import get, put
-from partd import create, destroy, filename
+from partd.pickle import get, put, create, destroy
+from partd import filename
 
 
 import os

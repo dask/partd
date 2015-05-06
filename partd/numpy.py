@@ -4,6 +4,7 @@ import numpy as np
 import struct
 from . import core
 
+destroy = core.destroy
 
 def create(path, dtype):
     """ Create store with known dtype """

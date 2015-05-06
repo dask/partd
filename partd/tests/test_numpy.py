@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
-from partd.numpy import create, put, get
-from partd import destroy, filename
+from partd.numpy import create, put, get, destroy
+from partd import filename
 
 import numpy as np
 import os
