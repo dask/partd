@@ -22,6 +22,8 @@ def test_part2():
     result = get(path, ['y', 'x'])
     assert result == [b'abcdef', b'HelloWorld!']
 
+    assert get(path, ['z']) == [b'']
+
     with lock(path):  # uh oh, possible deadlock
         result = get(path, ['x'], lock=False)
 

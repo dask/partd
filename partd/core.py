@@ -56,8 +56,11 @@ def get(path, keys, lock=lock):
     with lock(path):
         result = []
         for key in keys:
-            with open(filename(path, key), 'rb') as f:
-                result.append(f.read())
+            try:
+                with open(filename(path, key), 'rb') as f:
+                    result.append(f.read())
+            except IOError:
+                result.append(b'')
     return result
 
 
