@@ -2,6 +2,9 @@ from __future__ import absolute_import, print_function
 
 import zmq
 from itertools import chain
+from bisect import bisect
+from operator import add
+from toolz import accumulate, topk
 import uuid
 from collections import defaultdict
 from contextlib import contextmanager
@@ -80,8 +83,13 @@ class Server(object):
             self.flush_some()
 
     def flush_some(self):
-        avg = mean(self.lengths.values())
-        keys = [k for k, v in self.lengths.items() if v > avg]
+        tophalf = topk(len(self.lengths) / 2 + 1,
+                            self.lengths.items(),
+                            key=1)
+        cutoff = bisect(list(accumulate(add, tophalf)),
+                        self.memory_usage / 5) + 1
+        keys = [k for k, v in tophalf[:cutoff]]
+
         self.flush_keys(keys)
 
     def flush_keys(self, keys):
@@ -149,8 +157,3 @@ def put(path, data):
     sock = socket(path)
     payload = list(chain.from_iterable(data.items()))
     sock.send_multipart([b'put'] + payload)
-
-
-def mean(seq):
-    seq = list(seq)
-    return sum(seq) / float(len(seq))
