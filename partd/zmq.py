@@ -45,6 +45,7 @@ class Server(object):
         self.available_memory=available_memory
         self.memory_usage = 0
         self.status = 'run'
+        self._threads = list()
 
     def start(self):
         self._listen_thread = Thread(target=self.listen).start()
@@ -85,13 +86,23 @@ class Server(object):
 
     def flush_keys(self, keys):
         assert isinstance(keys, (tuple, list))
-        core.put(self.path, dict((key, ''.join(self.inmem[key])) for key in keys))
+        payload = dict((key, ''.join(self.inmem[key])) for key in keys)
+
+        # Send off flush-to-disk in separate thread
+        # Overlap disk writing with zmq reading
+        thread = Thread(target=core.put, args=(self.path, payload))
+        thread.start()
+        self._threads.append(thread)
+
         for key in keys:
             self.memory_usage -= self.lengths[key]
             del self.inmem[key]
             del self.lengths[key]
 
     def get(self, keys):
+        while self._threads:
+            self._threads.pop().join()
+
         from_disk = core.get(self.path, keys)
         result = [from_disk[i] + ''.join(self.inmem[k])
                       for i, k in enumerate(keys)]
