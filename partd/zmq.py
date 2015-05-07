@@ -103,7 +103,7 @@ class Server(object):
 
 def create(path, **kwargs):
     core.create(path)
-    server = Server(path)
+    server = Server(path, **kwargs)
     server.start()
     return server
 

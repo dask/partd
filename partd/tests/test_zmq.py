@@ -12,9 +12,10 @@ def test_partd():
         shutil.rmtree(path)
 
     assert not os.path.exists(path)
-    create(path)
+    server = create(path, available_memory=100)
     assert os.path.exists(path)
     assert os.path.exists(core.filename(path, '.address'))
+    assert server.available_memory == 100
 
     put(path, {'x': b'Hello', 'y': b'abc'})
     put(path, {'x': b'World!', 'y': b'def'})
