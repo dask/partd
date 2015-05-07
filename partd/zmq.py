@@ -105,7 +105,7 @@ def create(path, **kwargs):
     core.create(path)
     server = Server(path)
     server.start()
-
+    return server
 
 
 sockets = dict()
