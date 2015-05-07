@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 from partd.numpy import create, put, get, destroy
-from partd import filename
+from partd.core import lock, filename
 
 import numpy as np
 import os
@@ -33,6 +33,9 @@ def test_partd():
     result = get(path, ['a', 'c'])
     assert (result[0] == np.array([10, 20, 30, 70, 80, 90],dtype=dt['a'])).all()
     assert (result[1] == np.array([.1, .2, .3, .7, .8, .9],dtype=dt['c'])).all()
+
+    with lock(path):  # uh oh, possible deadlock
+        result = get(path, ['a'], lock=False)
 
     destroy(path)
     assert not os.path.exists(path)

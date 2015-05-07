@@ -19,14 +19,14 @@ def dtype(path):
     return np.dtype(eval(text))  # TODO: this is insecure
 
 
-def put(path, data, put=core.put):
+def put(path, data, put=core.put, **kwargs):
     """ Put dict of numpy arrays into store """
     bytes = dict((k, v.tobytes()) for k, v in data.items())
-    put(path, bytes)
+    put(path, bytes, **kwargs)
 
 
-def get(path, keys, get=core.get):
+def get(path, keys, get=core.get, **kwargs):
     """ Get list of numpy arrays from store """
-    bytes = get(path, keys)
+    bytes = get(path, keys, **kwargs)
     dt = dtype(path)
     return [np.frombuffer(bytes[i], dtype=dt[k]) for i, k in enumerate(keys)]

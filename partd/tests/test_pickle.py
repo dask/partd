@@ -1,5 +1,5 @@
 from partd.pickle import get, put, create, destroy
-from partd import filename
+from partd.core import filename, lock
 
 
 import os
@@ -23,6 +23,9 @@ def test_part2():
     result = get(path, ['y', 'x'])
     assert result == [[1, 2, 3, 4, 5, 6],
                       ['Hello', 'World!', 'Alice', 'Bob!']]
+
+    with lock(path):  # uh oh, possible deadlock
+        result = get(path, ['x'], lock=False)
 
     destroy(path)
     assert not os.path.exists(path)

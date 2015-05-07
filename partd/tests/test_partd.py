@@ -1,4 +1,5 @@
 from partd import create, put, get, destroy, filename
+from partd.core import lock
 import os
 import shutil
 
@@ -21,6 +22,8 @@ def test_part2():
     result = get(path, ['y', 'x'])
     assert result == [b'abcdef', b'HelloWorld!']
 
+    with lock(path):  # uh oh, possible deadlock
+        result = get(path, ['x'], lock=False)
+
     destroy(path)
     assert not os.path.exists(path)
-

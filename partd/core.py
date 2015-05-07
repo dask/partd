@@ -4,6 +4,7 @@ import os
 import shutil
 import locket
 from toolz import memoize
+from contextlib import contextmanager
 
 
 locks = dict()
@@ -39,14 +40,19 @@ def create(path):
     lock(path)
 
 
-def put(path, data):
+def put(path, data, lock=lock):
+    if not lock:
+        lock = do_nothing
     with lock(path):
         for k, v in data.items():
             with open(filename(path, k), 'ab') as f:
                 f.write(v)
 
 
-def get(path, keys):
+def get(path, keys, lock=lock):
+    assert isinstance(keys, (list, tuple, set))
+    if not lock:
+        lock = do_nothing
     with lock(path):
         result = []
         for key in keys:
@@ -57,3 +63,8 @@ def get(path, keys):
 
 def destroy(path):
     shutil.rmtree(path)
+
+
+@contextmanager
+def do_nothing(*args, **kwargs):
+    yield

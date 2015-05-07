@@ -27,13 +27,13 @@ def multi_loads(data):
             return result
 
 
-def put(path, data, protocol=pickle.HIGHEST_PROTOCOL, put=core.put):
+def put(path, data, protocol=pickle.HIGHEST_PROTOCOL, put=core.put, **kwargs):
     """ Put dict of Python lists into store """
     data = dict((k, pickle.dumps(v, protocol=protocol))
                 for k, v in data.items())
-    put(path, data)
+    put(path, data, **kwargs)
 
 
-def get(path, keys, get=core.get):
+def get(path, keys, get=core.get, **kwargs):
     """ Retrieve Python lists from store """
-    return list(map(multi_loads, get(path, keys)))
+    return list(map(multi_loads, get(path, keys, **kwargs)))
