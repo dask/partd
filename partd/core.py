@@ -18,8 +18,20 @@ def lock(path):
     return lock
 
 
+def escape_filename(fn):
+    """ Escape text so that it is a valid filename
+
+    >>> escape_filename('Foo!/bar')
+    'Foobar'
+
+    http://stackoverflow.com/questions/295135/turn-a-string-into-a-valid-filename-in-python
+    """
+    import string
+    valid_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
+    return ''.join(filter(valid_chars.__contains__, fn))
+
 def filename(path, key):
-    return os.path.join(path, str(key))
+    return os.path.join(path, escape_filename(str(key)))
 
 
 def create(path):
