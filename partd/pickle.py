@@ -4,7 +4,8 @@ get/put functions that consume/produce Python lists using Pickle to serialize
 
 from __future__ import absolute_import
 from . import core
-from .compatibility import StringIO, pickle
+from .compatibility import pickle
+from .utils import tmpfile
 
 
 create = core.create
@@ -18,13 +19,18 @@ def multi_loads(data):
     >>> multi_loads(data)
     [1, 2, 3, 4, 5, 6]
     """
-    s = StringIO(data)
+    # f = StringIO(data)  # This performs really slowly for some reason
+    # Instead we create a file on disk :-(
     result = []
-    while True:
-        try:
-            result.extend(pickle.load(s))
-        except EOFError:
-            return result
+    with tmpfile() as fn:
+        with open(fn, 'wb') as f:
+            f.write(data)
+        with open(fn) as f:
+            while True:
+                try:
+                    result.extend(pickle.load(f))
+                except EOFError:
+                    return result
 
 
 def put(path, data, protocol=pickle.HIGHEST_PROTOCOL, put=core.put, **kwargs):
