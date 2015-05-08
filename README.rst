@@ -1,12 +1,12 @@
 PartD
 =====
 
-Append-only key-value storage.
+Minimal key-value byte storage with appendable values
 
-Partd stores data.  Partd arranges data in key-value pairs where the keys are
-small and the values are long and appendable bytestrings.  You can add new data
-onto the end of existing values.  You can get the entire value associated to a
-list of keys.
+Partd stores data.  Partd arranges data in key-value pairs where the values are
+just raw bytes.  We can append data onto the end of existing values.  You can
+get the entire value associated to a list of keys.
+
 
 API
 ---
@@ -33,17 +33,35 @@ Partd supports four operations
 
 That's it.
 
-There is no in-memory state.  Partd coordinates between many processes using
-file-based locks.
+There is no in-memory state.
+
+Implementations
+---------------
+
+The reference implementation uses file-based locks.  This works surprisingly
+well as long as you don't do many small writes
+
+If you do many small writes then you probably want to cache in memory; this is
+hard to do in parallel while also maintaining consistency.  For this we have a
+centralized server (see ``partd.zmq``) that caches data in memory and writes
+only large chunks to disk when necessary.
+
+
+Encodings
+---------
+
+``partd.pickle`` and ``partd.numpy`` handle encoding/decoding pickled lists and
+numpy arrays with the same ``partd`` ``get/put`` interface.  They compose well
+with the zmq solution.
 
 
 Future plans
 ------------
 
-Things that will happen if our plan is exactly perfect (it isn't!)
+Things that will happen if our plan is perfect (it isn't!)
 
 1.  These functions can be implemented in other, non-file-based ways, perhaps
-    with a distributed system that does in-memory buffering and peer-to-peer
-    communication and stuff.
+    with a distributed system that peer-to-peer communication and stuff.
 2.  We'll build interfaces around partd that handle dataframes, numpy arrays,
     pickled lists, etc..
+3.  Compression
