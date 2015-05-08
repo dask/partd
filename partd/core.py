@@ -5,18 +5,21 @@ import shutil
 import locket
 from toolz import memoize
 from contextlib import contextmanager
+from threading import Lock
 
 
 locks = dict()
+locks = dict()
 
 
+@contextmanager
 def lock(path):
-    try:
-        return locks[path]
-    except KeyError:
-        lock = locket.lock_file(os.path.join(path, '.lock'))
-        locks[path] = lock
-    return lock
+    if path not in locks:
+        locks[path] = Lock(), locket.lock_file(os.path.join(path, '.lock'))
+    thread_lock, file_lock = locks[path]
+    with thread_lock:
+        with file_lock:
+            yield
 
 
 def escape_filename(fn):
@@ -37,7 +40,7 @@ def filename(path, key):
 
 def create(path):
     os.mkdir(path)
-    lock(path)
+    with lock(path): pass
 
 
 def put(path, data, lock=lock):
