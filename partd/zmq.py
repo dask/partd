@@ -4,12 +4,14 @@ import zmq
 from itertools import chain
 from bisect import bisect
 from operator import add
+from time import sleep
 from toolz import accumulate, topk, pluck
 import uuid
 from collections import defaultdict
 from contextlib import contextmanager
 from threading import Thread
 from . import core
+from .compatibility import Queue, Empty
 
 context = zmq.Context()
 
@@ -33,7 +35,6 @@ def logerrors():
 class Server(object):
     def __init__(self, path, address=None, available_memory=1e9):
         self.path = path
-        self.lock = core.lock(path)
         self.inmem = defaultdict(list)
         self.lengths = defaultdict(lambda: 0)
         self.socket = context.socket(zmq.ROUTER)
@@ -48,10 +49,13 @@ class Server(object):
         self.available_memory=available_memory
         self.memory_usage = 0
         self.status = 'run'
-        self._threads = list()
+        self._out_disk_buffer = Queue(maxsize=3)
 
     def start(self):
-        self._listen_thread = Thread(target=self.listen).start()
+        self._listen_thread = Thread(target=self.listen)
+        self._listen_thread.start()
+        self._write_to_disk_thread = Thread(target=self._write_to_disk)
+        self._write_to_disk_thread.start()
 
     def listen(self):
         while self.status != 'closed':
@@ -73,6 +77,16 @@ class Server(object):
                 result = self.get(payload)
                 self.socket.send_multipart([address] + result)
 
+    def _write_to_disk(self):
+        while self.status != 'closed':
+            try:
+                data = self._out_disk_buffer.get(timeout=0.1)
+                self._out_disk_buffer.task_done()
+            except Empty:
+                continue
+            else:
+                core.put(self.path, data)
+
     def put(self, data):
         for k, v in data.items():
             self.inmem[k].append(v)
@@ -86,12 +100,7 @@ class Server(object):
     def flush(self, keys):
         assert isinstance(keys, (tuple, list))
         payload = dict((key, ''.join(self.inmem[key])) for key in keys)
-
-        # Send off flush-to-disk in separate thread
-        # Overlap disk writing with zmq reading
-        thread = Thread(target=core.put, args=(self.path, payload))
-        thread.start()
-        self._threads.append(thread)
+        self._out_disk_buffer.put(payload)
 
         for key in keys:
             self.memory_usage -= self.lengths[key]
@@ -99,8 +108,7 @@ class Server(object):
             del self.lengths[key]
 
     def get(self, keys):
-        while self._threads:
-            self._threads.pop().join()
+        self._out_disk_buffer.join()  # block until everything is written
 
         from_disk = core.get(self.path, keys)
         result = [from_disk[i] + ''.join(self.inmem[k])

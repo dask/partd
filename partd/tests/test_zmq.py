@@ -31,13 +31,17 @@ def test_server():
     core.destroy('foo')
     core.create('foo')
     s = Server('foo', available_memory=10)
-    s.put({'x': b'abc', 'y': b'1234'})
-    assert s.memory_usage == 7
-    s.put({'x': b'def', 'y': b'5678'})
-    assert s.memory_usage < s.available_memory
+    try:
+        s.start()
+        s.put({'x': b'abc', 'y': b'1234'})
+        assert s.memory_usage == 7
+        s.put({'x': b'def', 'y': b'5678'})
+        assert s.memory_usage < s.available_memory
 
-    assert s.get(['x']) == [b'abcdef']
-    assert s.get(['x', 'y']) == [b'abcdef', b'12345678']
+        assert s.get(['x']) == [b'abcdef']
+        assert s.get(['x', 'y']) == [b'abcdef', b'12345678']
+    finally:
+        s.close()
 
 
 def test_keys_to_flush():
