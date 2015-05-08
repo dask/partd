@@ -5,21 +5,15 @@ import shutil
 import locket
 from toolz import memoize
 from contextlib import contextmanager
-from threading import Lock
 
 
 locks = dict()
-locks = dict()
 
 
-@contextmanager
 def lock(path):
     if path not in locks:
-        locks[path] = Lock(), locket.lock_file(os.path.join(path, '.lock'))
-    thread_lock, file_lock = locks[path]
-    with thread_lock:
-        with file_lock:
-            yield
+        locks[path] = locket.lock_file(os.path.join(path, '.lock'))
+    return locks[path]
 
 
 def escape_filename(fn):
