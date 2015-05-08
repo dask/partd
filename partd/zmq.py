@@ -93,11 +93,10 @@ class Server(object):
                 self._out_disk_buffer.task_done()
 
     def put(self, data):
-        with self._lock:
-            for k, v in data.items():
-                self.inmem[k].append(v)
-                self.lengths[k] += len(v)
-                self.memory_usage += len(v)
+        for k, v in data.items():
+            self.inmem[k].append(v)
+            self.lengths[k] += len(v)
+            self.memory_usage += len(v)
 
         if self.memory_usage > self.available_memory:
             keys = keys_to_flush(self.lengths, 0.25)
