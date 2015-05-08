@@ -4,7 +4,7 @@ import zmq
 from itertools import chain
 from bisect import bisect
 from operator import add
-from toolz import accumulate, topk
+from toolz import accumulate, topk, pluck
 import uuid
 from collections import defaultdict
 from contextlib import contextmanager
@@ -80,19 +80,10 @@ class Server(object):
             self.memory_usage += len(v)
 
         if self.memory_usage > self.available_memory:
-            self.flush_some()
+            keys = keys_to_flush(self.lengths, 0.25)
+            self.flush(keys)
 
-    def flush_some(self):
-        tophalf = topk(len(self.lengths) / 2 + 1,
-                            self.lengths.items(),
-                            key=1)
-        cutoff = bisect(list(accumulate(add, tophalf)),
-                        self.memory_usage / 5) + 1
-        keys = [k for k, v in tophalf[:cutoff]]
-
-        self.flush_keys(keys)
-
-    def flush_keys(self, keys):
+    def flush(self, keys):
         assert isinstance(keys, (tuple, list))
         payload = dict((key, ''.join(self.inmem[key])) for key in keys)
 
@@ -118,6 +109,23 @@ class Server(object):
 
     def close(self):
         self.status = 'closed'
+
+
+def keys_to_flush(lengths, fraction=0.4):
+    """ Which keys to remove
+
+    >>> lengths = {'a': 20, 'b': 10, 'c': 15, 'd': 15,
+    ...            'e': 10, 'f': 25, 'g': 5}
+    >>> keys_to_flush(lengths, 0.5)
+    ['f', 'a']
+    """
+    tophalf = topk(max(len(lengths) / 2, 1),
+                       lengths.items(),
+                       key=1)
+    total = sum(lengths.values())
+    cutoff = max(1, bisect(list(accumulate(add, pluck(1, tophalf))),
+                    total * fraction))
+    return [k for k, v in tophalf[:cutoff]]
 
 
 def create(path, **kwargs):

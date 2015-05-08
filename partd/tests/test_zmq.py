@@ -1,4 +1,4 @@
-from partd.zmq import create, destroy, put, get, Server
+from partd.zmq import create, destroy, put, get, Server, keys_to_flush
 
 from partd import core
 
@@ -38,3 +38,8 @@ def test_server():
 
     assert s.get(['x']) == [b'abcdef']
     assert s.get(['x', 'y']) == [b'abcdef', b'12345678']
+
+
+def test_keys_to_flush():
+    lengths = {'a': 20, 'b': 10, 'c': 15, 'd': 15, 'e': 10, 'f': 25, 'g': 5}
+    assert keys_to_flush(lengths, 0.5) == ['f', 'a']
