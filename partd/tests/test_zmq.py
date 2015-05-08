@@ -42,10 +42,10 @@ def test_server():
         assert s.get(['x']) == [b'abcdef']
         assert s.get(['x', 'y']) == [b'abcdef', b'12345678']
 
-        s.flush()
+        s.flush(block=True)
 
         assert s.memory_usage == 0
-        assert core.get('foo', ['x']) == [b'abcdef']
+        assert core.get('foo', ['x'], lock=False) == [b'abcdef']
     finally:
         s.close()
 

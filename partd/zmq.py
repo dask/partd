@@ -9,7 +9,7 @@ from toolz import accumulate, topk, pluck
 import uuid
 from collections import defaultdict
 from contextlib import contextmanager
-from threading import Thread
+from threading import Thread, Lock
 from . import core
 from .compatibility import Queue, Empty
 
@@ -51,6 +51,9 @@ class Server(object):
         self.status = 'run'
         self._out_disk_buffer = Queue(maxsize=3)
 
+        self._file_lock = core.lock(path)
+        self._file_lock.acquire()
+
     def start(self):
         self._listen_thread = Thread(target=self.listen)
         self._listen_thread.start()
@@ -81,11 +84,11 @@ class Server(object):
         while self.status != 'closed':
             try:
                 data = self._out_disk_buffer.get(timeout=0.1)
-                self._out_disk_buffer.task_done()
             except Empty:
                 continue
             else:
-                core.put(self.path, data)
+                core.put(self.path, data, lock=False)
+                self._out_disk_buffer.task_done()
 
     def put(self, data):
         for k, v in data.items():
@@ -128,14 +131,14 @@ class Server(object):
 
     def get(self, keys):
         self._out_disk_buffer.join()  # block until everything is written
-
-        from_disk = core.get(self.path, keys)
+        from_disk = core.get(self.path, keys, lock=False)
         result = [from_disk[i] + ''.join(self.inmem[k])
                       for i, k in enumerate(keys)]
         return result
 
     def close(self):
         self.status = 'closed'
+        self._file_lock.release()
 
 
 def keys_to_flush(lengths, fraction=0.4):
