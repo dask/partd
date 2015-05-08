@@ -97,7 +97,23 @@ class Server(object):
             keys = keys_to_flush(self.lengths, 0.25)
             self.flush(keys)
 
-    def flush(self, keys):
+    def flush(self, keys=None, block=None):
+        """ Flush keys to disk
+
+        Parameters
+        ----------
+
+        keys: list or None
+            list of keys to flush
+        block: bool (defaults to None)
+            Whether or not to block until all writing is complete
+
+        If no keys are given then flush all keys
+        """
+        if keys is None:
+            keys = list(self.lengths)
+            if block is None:
+                block = True
         assert isinstance(keys, (tuple, list))
         payload = dict((key, ''.join(self.inmem[key])) for key in keys)
         self._out_disk_buffer.put(payload)
@@ -106,6 +122,9 @@ class Server(object):
             self.memory_usage -= self.lengths[key]
             del self.inmem[key]
             del self.lengths[key]
+
+        if block:
+            self._out_disk_buffer.join()
 
     def get(self, keys):
         self._out_disk_buffer.join()  # block until everything is written

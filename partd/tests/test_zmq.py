@@ -28,7 +28,8 @@ def test_partd():
 
 
 def test_server():
-    core.destroy('foo')
+    if os.path.exists('foo'):
+        core.destroy('foo')
     core.create('foo')
     s = Server('foo', available_memory=10)
     try:
@@ -40,6 +41,11 @@ def test_server():
 
         assert s.get(['x']) == [b'abcdef']
         assert s.get(['x', 'y']) == [b'abcdef', b'12345678']
+
+        s.flush()
+
+        assert s.memory_usage == 0
+        assert core.get('foo', ['x']) == [b'abcdef']
     finally:
         s.close()
 
