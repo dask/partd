@@ -53,6 +53,7 @@ class Server(object):
 
         self._file_lock = core.lock(path)
         self._file_lock.acquire()
+        self._lock = Lock()
 
     def start(self):
         self._listen_thread = Thread(target=self.listen)
@@ -87,14 +88,16 @@ class Server(object):
             except Empty:
                 continue
             else:
-                core.put(self.path, data, lock=False)
+                with self._lock:
+                    core.put(self.path, data, lock=False)
                 self._out_disk_buffer.task_done()
 
     def put(self, data):
-        for k, v in data.items():
-            self.inmem[k].append(v)
-            self.lengths[k] += len(v)
-            self.memory_usage += len(v)
+        with self._lock:
+            for k, v in data.items():
+                self.inmem[k].append(v)
+                self.lengths[k] += len(v)
+                self.memory_usage += len(v)
 
         if self.memory_usage > self.available_memory:
             keys = keys_to_flush(self.lengths, 0.25)
@@ -131,9 +134,10 @@ class Server(object):
 
     def get(self, keys):
         self._out_disk_buffer.join()  # block until everything is written
-        from_disk = core.get(self.path, keys, lock=False)
-        result = [from_disk[i] + ''.join(self.inmem[k])
-                      for i, k in enumerate(keys)]
+        with self._lock:
+            from_disk = core.get(self.path, keys, lock=False)
+            result = [from_disk[i] + ''.join(self.inmem[k])
+                          for i, k in enumerate(keys)]
         return result
 
     def close(self):
