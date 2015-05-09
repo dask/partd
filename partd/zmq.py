@@ -10,10 +10,13 @@ import uuid
 from collections import defaultdict
 from contextlib import contextmanager
 from threading import Thread, Lock
+from toolz import keymap
 from . import core
 from .compatibility import Queue, Empty
 
 context = zmq.Context()
+
+tuple_sep = '-|-'
 
 with open('log', 'w') as f:  # delete file
     pass
@@ -84,11 +87,14 @@ class Server(object):
                 break
 
             if command == b'put':
-                data = dict(zip(payload[::2], payload[1::2]))
+                keys, values = payload[::2], payload[1::2]
+                keys = list(map(deserialize_key, keys))
+                data = dict(zip(keys, values))
                 self.put(data)
 
             if command == b'get':
-                result = self.get(payload)
+                keys = list(map(deserialize_key, payload))
+                result = self.get(keys)
                 self.socket.send_multipart([address] + result)
 
     def _write_to_disk(self):
@@ -206,14 +212,45 @@ def destroy(path, server=None):
     core.destroy(path)
 
 
+def serialize_key(key):
+    """
+
+    >>> serialize_key('x')
+    'x'
+    >>> serialize_key(('a', 'b', 1))
+    'a-|-b-|-1'
+    """
+    if isinstance(key, tuple):
+        return tuple_sep.join(map(serialize_key, key))
+    if isinstance(key, (bytes, str)):
+        return key
+    return str(key)
+
+
+def deserialize_key(text):
+    """
+
+    >>> deserialize_key('x')
+    'x'
+    >>> deserialize_key('a-|-b-|-1')
+    ('a', 'b', '1')
+    """
+    if tuple_sep in text:
+        return tuple(text.split(tuple_sep))
+    else:
+        return text
+
+
 def get(path, keys):
     sock = socket(path)
+    keys = list(map(serialize_key, keys))
     sock.send_multipart([b'get'] + keys)
     return sock.recv_multipart()
 
 
 def put(path, data):
     sock = socket(path)
+    data = keymap(serialize_key, data)
     payload = list(chain.from_iterable(data.items()))
     sock.send_multipart([b'put'] + payload)
 

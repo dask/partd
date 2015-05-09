@@ -52,3 +52,9 @@ def test_ensure():
 def test_keys_to_flush():
     lengths = {'a': 20, 'b': 10, 'c': 15, 'd': 15, 'e': 10, 'f': 25, 'g': 5}
     assert keys_to_flush(lengths, 0.5) == ['f', 'a']
+
+
+def test_tuple_keys():
+    with partd() as (path, server):
+        put(path, {('x', 'y'): b'123'})
+        assert get(path, [('x', 'y')]) == [b'123']
