@@ -108,10 +108,10 @@ def ensure(path, key, data):
     """
     if (path, key) in _ensured:
         return
-    with lock(path):
-        if (path, key) not in _ensured:
-            _ensured.add((path, key))
-            put(path, {key: data}, lock=False)
+    else:
+        _ensured.add((path, key))
+        with open(filename(path, key), 'w') as f:
+            f.write(data)
 
 
 @contextmanager
