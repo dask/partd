@@ -85,6 +85,9 @@ def get(path, keys, lock=lock):
 
 def destroy(path):
     shutil.rmtree(path)
+    old_keys = set([key for key in _ensured if key[0] == path])
+    for key in old_keys:
+        _ensured.remove(key)
 
 
 _ensured = set()
@@ -103,11 +106,11 @@ def ensure(path, key, data):
     >>> get('path', ['x'], lock=False)  # doctest: +SKIP
     b'123'
     """
-    if key in _ensured:
+    if (path, key) in _ensured:
         return
     with lock(path):
-        if key not in _ensured:
-            _ensured.add(key)
+        if (path, key) not in _ensured:
+            _ensured.add((path, key))
             put(path, {key: data}, lock=False)
 
 

@@ -52,6 +52,8 @@ def test_ensure():
 
         assert get(pth, ['x']) == [b'123']
 
+    assert (pth, 'x') not in core._ensured
+
 
 def test_filenames():
     assert token('hello') == 'hello'

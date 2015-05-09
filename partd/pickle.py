@@ -43,3 +43,9 @@ def put(path, data, protocol=pickle.HIGHEST_PROTOCOL, put=core.put, **kwargs):
 def get(path, keys, get=core.get, **kwargs):
     """ Retrieve Python lists from store """
     return list(map(multi_loads, get(path, keys, **kwargs)))
+
+
+def ensure(path, key, value, protocol=pickle.HIGHEST_PROTOCOL,
+           ensure=core.ensure):
+    import pdb; pdb.set_trace()
+    ensure(path, key, pickle.dumps(value, protocol=protocol))
