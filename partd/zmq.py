@@ -4,7 +4,7 @@ import zmq
 from itertools import chain
 from bisect import bisect
 from operator import add
-from time import sleep
+from time import sleep, time
 from toolz import accumulate, topk, pluck
 import uuid
 from collections import defaultdict
@@ -22,6 +22,16 @@ def log(*args):
     with open('log', 'a') as f:
         print(*args, file=f)
 
+@contextmanager
+def logduration(message, nbytes=None):
+    start = time()
+    try:
+        yield
+    finally:
+        end = time()
+        log(message, end - start)
+        if nbytes:
+            log("MB/s:", nbytes / (end - start) / 1e6)
 
 @contextmanager
 def logerrors():
@@ -89,7 +99,10 @@ class Server(object):
                 continue
             else:
                 with self._lock:
-                    core.put(self.path, data, lock=False)
+                    nbytes = sum(map(len, data.values()))
+                    with logduration("Write %d files" % len(data),
+                                     nbytes=nbytes):
+                        core.put(self.path, data, lock=False)
                 self._out_disk_buffer.task_done()
 
     def put(self, data):
