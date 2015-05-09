@@ -55,6 +55,8 @@ class Server(object):
         self._file_lock.acquire()
         self._lock = Lock()
 
+        self._ensured = set()
+
     def start(self):
         self._listen_thread = Thread(target=self.listen)
         self._listen_thread.start()
@@ -81,6 +83,9 @@ class Server(object):
                 result = self.get(payload)
                 self.socket.send_multipart([address] + result)
 
+            if command == b'ensure':
+                self.ensure(*payload)
+
     def _write_to_disk(self):
         while self.status != 'closed':
             try:
@@ -101,6 +106,13 @@ class Server(object):
         if self.memory_usage > self.available_memory:
             keys = keys_to_flush(self.lengths, 0.25)
             self.flush(keys)
+
+    def ensure(self, key, value):
+        if key in self._ensured:
+            return
+        else:
+            self._ensured.add(key)
+            self.put({key: value})
 
     def flush(self, keys=None, block=None):
         """ Flush keys to disk
@@ -182,9 +194,14 @@ def socket(path):
         return sock
 
 
-def destroy(path):
+def destroy(path, server=None):
     sock = socket(path)
-    sock.send_multipart(['close'])
+    if server:
+        server.close()
+    else:
+        sock.send_multipart(['close'])
+        sock.close(linger=1)
+    del sockets[path]
     core.destroy(path)
 
 
@@ -198,3 +215,20 @@ def put(path, data):
     sock = socket(path)
     payload = list(chain.from_iterable(data.items()))
     sock.send_multipart([b'put'] + payload)
+
+
+def ensure(path, key, value):
+    sock = socket(path)
+    sock.send_multipart([b'ensure', key, value])
+
+
+@contextmanager
+def partd(path=None, **kwargs):
+    if path is None:
+        path = 'tmp.partd'
+    server = create(path, **kwargs)
+
+    try:
+        yield path, server
+    finally:
+        destroy(path, server)

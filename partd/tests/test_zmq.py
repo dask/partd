@@ -1,4 +1,5 @@
-from partd.zmq import create, destroy, put, get, Server, keys_to_flush
+from partd.zmq import (create, destroy, put, get, Server, keys_to_flush, partd,
+        ensure)
 
 from partd import core
 
@@ -6,24 +7,16 @@ import os
 import shutil
 
 def test_partd():
-    path = 'tmp.partd'
+    with partd(available_memory=100) as (path, server):
+        assert os.path.exists(path)
+        assert os.path.exists(core.filename(path, '.address'))
+        assert server.available_memory == 100
 
-    if os.path.exists(path):
-        shutil.rmtree(path)
+        put(path, {'x': b'Hello', 'y': b'abc'})
+        put(path, {'x': b'World!', 'y': b'def'})
 
-    assert not os.path.exists(path)
-    server = create(path, available_memory=100)
-    assert os.path.exists(path)
-    assert os.path.exists(core.filename(path, '.address'))
-    assert server.available_memory == 100
-
-    put(path, {'x': b'Hello', 'y': b'abc'})
-    put(path, {'x': b'World!', 'y': b'def'})
-
-    result = get(path, ['y', 'x'])
-    assert result == [b'abcdef', b'HelloWorld!']
-
-    destroy(path)
+        result = get(path, ['y', 'x'])
+        assert result == [b'abcdef', b'HelloWorld!']
     assert not os.path.exists(path)
 
 
@@ -49,6 +42,12 @@ def test_server():
     finally:
         s.close()
 
+
+def test_ensure():
+    with partd() as (path, server):
+        ensure(path, 'x', b'111')
+        ensure(path, 'x', b'111')
+        assert get(path, ['x']) == [b'111']
 
 def test_keys_to_flush():
     lengths = {'a': 20, 'b': 10, 'c': 15, 'd': 15, 'e': 10, 'f': 25, 'g': 5}

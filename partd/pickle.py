@@ -48,5 +48,4 @@ def get(path, keys, get=core.get, **kwargs):
 
 def ensure(path, key, value, protocol=pickle.HIGHEST_PROTOCOL,
            ensure=core.ensure):
-    import pdb; pdb.set_trace()
     ensure(path, key, pickle.dumps(value, protocol=protocol))
