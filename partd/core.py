@@ -117,3 +117,16 @@ def ensure(path, key, data):
 @contextmanager
 def do_nothing(*args, **kwargs):
     yield
+
+
+@contextmanager
+def partd(path='tmp.partd', create=create, destroy=destroy, **kwargs):
+    if os.path.exists(path):
+        shutil.rmtree(path)
+
+    create(path, **kwargs)
+
+    try:
+        yield path
+    finally:
+        destroy(path)

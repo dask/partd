@@ -10,6 +10,7 @@ from .utils import tmpfile
 
 create = core.create
 destroy = core.destroy
+partd = core.partd
 
 
 def multi_loads(data):

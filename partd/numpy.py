@@ -1,12 +1,14 @@
 from __future__ import absolute_import
 
 import numpy as np
+from functools import partial
 import struct
+from contextlib import contextmanager
 from . import core
 
 destroy = core.destroy
 
-def create(path, dtype):
+def create(path, dtype=None):
     """ Create store with known dtype """
     core.create(path)
     with open(core.filename(path, '.dtype'), 'w') as f:
@@ -30,3 +32,9 @@ def get(path, keys, get=core.get, **kwargs):
     bytes = get(path, keys, **kwargs)
     dt = dtype(path)
     return [np.frombuffer(bytes[i], dtype=dt[k]) for i, k in enumerate(keys)]
+
+
+@contextmanager
+def partd(path='tmp.partd', dtype=None):
+    with core.partd(path, create=partial(create, dtype=dtype)) as path:
+        yield path

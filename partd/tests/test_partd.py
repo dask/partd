@@ -1,5 +1,6 @@
-from partd import create, put, get, destroy, ensure
+from partd import create, put, get, destroy, ensure, partd
 from partd.core import lock, token, escape_filename, filename
+from partd import core
 import os
 import shutil
 from contextlib import contextmanager
@@ -8,7 +9,7 @@ from contextlib import contextmanager
 def test_part2():
     path = 'tmp.partd'
 
-    with part(path):
+    with partd(path):
         put(path, {'x': b'Hello', 'y': b'abc'})
         put(path, {'x': b'World!', 'y': b'def'})
         assert os.path.exists(filename(path, 'x'))
@@ -25,27 +26,14 @@ def test_part2():
     assert not os.path.exists(path)
 
 
-@contextmanager
-def part(path='tmp.partd'):
-    if os.path.exists(path):
-        shutil.rmtree(path)
-
-    create(path)
-
-    try:
-        yield path
-    finally:
-        destroy(path)
-
-
 def test_key_tuple():
-    with part() as pth:
+    with partd() as pth:
         put(pth, {('a', 'b'): b'123'})
         assert os.path.exists(os.path.join(pth, 'a', 'b'))
 
 
 def test_ensure():
-    with part() as pth:
+    with partd() as pth:
         ensure(pth, 'x', b'123')
         ensure(pth, 'x', b'123')
         ensure(pth, 'x', b'123')
