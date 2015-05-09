@@ -23,6 +23,9 @@ def log(*args):
     with open('log', 'a') as f:
         print(datetime.now(), *args, file=f)
 
+
+log('Import zmq')
+
 @contextmanager
 def logduration(message, nbytes=None):
     start = time()
@@ -61,44 +64,72 @@ class Server(object):
         self.memory_usage = 0
         self.status = 'run'
         self._out_disk_buffer = Queue(maxsize=3)
+        self._frozen_sockets = Queue()
 
         self._file_lock = core.lock(path)
         self._file_lock.acquire()
         self._lock = Lock()
+        self._socket_lock = Lock()
 
     def start(self):
+        log('Start server at', self.address)
         self._listen_thread = Thread(target=self.listen)
         self._listen_thread.start()
         self._write_to_disk_thread = Thread(target=self._write_to_disk)
         self._write_to_disk_thread.start()
+        self._free_frozen_sockets_thread = Thread(target=self._free_frozen_sockets)
+        self._free_frozen_sockets_thread.start()
 
     def listen(self):
-        while self.status != 'closed':
-            if not self.socket.poll(100):
-                continue
+        with logerrors():
+            log(self.address, 'start listening')
+            while self.status != 'closed':
+                if not self.socket.poll(100):
+                    continue
 
-            payload = self.socket.recv_multipart()
+                with self._socket_lock:
+                    payload = self.socket.recv_multipart()
 
-            address, command, payload = payload[0], payload[1], payload[2:]
-            if command == b'close':
-                self.status = 'closed'
-                break
+                address, command, payload = payload[0], payload[1], payload[2:]
+                log(self.address, 'Receive command', command)
+                if command == b'close':
+                    self.status = 'closed'
+                    self.ack(address)
+                    break
 
-            if command == b'put':
-                keys, values = payload[::2], payload[1::2]
-                keys = list(map(deserialize_key, keys))
-                data = dict(zip(keys, values))
-                self.put(data)
+                elif command == b'put':
+                    keys, values = payload[::2], payload[1::2]
+                    keys = list(map(deserialize_key, keys))
+                    data = dict(zip(keys, values))
+                    self.put(data)
+                    self.ack(address)
 
-            if command == b'get':
-                keys = list(map(deserialize_key, payload))
-                result = self.get(keys)
-                self.socket.send_multipart([address] + result)
+                elif command == b'get':
+                    keys = list(map(deserialize_key, payload))
+                    log('get', keys)
+                    result = self.get(keys)
+                    self.send_to_client(address, result)
+                    self.ack(address, flow_control=False)
+
+                elif command == b'syn':
+                    log('syn-ack')
+                    self.ack(address)
+
+                else:
+                    log("Unknown command", command)
+                    raise ValueError("Unknown command: " + command)
+
+    def send_to_client(self, address, result):
+        if not isinstance(result, list):
+            result = [result]
+        with self._socket_lock:
+            log('Server sends', address)
+            self.socket.send_multipart([address] + result)
 
     def _write_to_disk(self):
         while self.status != 'closed':
             try:
-                data = self._out_disk_buffer.get(timeout=0.1)
+                data = self._out_disk_buffer.get(timeout=1)
             except Empty:
                 continue
             else:
@@ -108,6 +139,24 @@ class Server(object):
                                      nbytes=nbytes):
                         core.put(self.path, data, lock=False)
                 self._out_disk_buffer.task_done()
+
+    def ack(self, address, flow_control=True):
+        if flow_control and self._out_disk_buffer.full():
+            self._frozen_sockets.put(address)
+        else:
+            log('server sends ack')
+            self.send_to_client(address, b'ack')
+
+    def _free_frozen_sockets(self):
+        while self.status != 'closed':
+            try:
+                data = self._frozen_sockets.get(timeout=1)
+            except Empty:
+                continue
+            else:
+                self._out_disk_buffer.join()
+                while not self._frozen_sockets.empty():
+                    self.ack(self._frozen_sockets.get())
 
     def put(self, data):
         for k, v in data.items():
@@ -192,36 +241,48 @@ def socket(path):
         return sockets[path]
     except KeyError:
         sock = context.socket(zmq.DEALER)
+        lock = Lock()
         with open(core.filename(path, '.address')) as f:
             addr = f.read()
         sock.connect(addr)
-        sockets[path] = sock
-        return sock
+        sockets[path] = (sock, lock)
+        send(path, b'syn', [], ack_required=False)
+        return sock, lock
 
 
 def destroy(path, server=None):
-    sock = socket(path)
     if server:
         server.close()
     else:
-        sock.send_multipart(['close'])
-        sock.close(linger=1)
+        send(path, b'close', [])
     del sockets[path]
     core.destroy(path)
 
 
 def get(path, keys):
-    sock = socket(path)
     keys = list(map(serialize_key, keys))
-    sock.send_multipart([b'get'] + keys)
-    return sock.recv_multipart()
+    return send(path, b'get', keys, recv=True)
 
 
 def put(path, data):
-    sock = socket(path)
     data = keymap(serialize_key, data)
     payload = list(chain.from_iterable(data.items()))
-    sock.send_multipart([b'put'] + payload)
+    send(path, b'put', payload)
+
+
+def send(path, command, payload, recv=False, ack_required=True):
+    sock, lock = socket(path)
+    with lock:
+        if ack_required:
+            ack = sock.recv_multipart()
+            assert ack == [b'ack']
+        log('Client sends command', command)
+        sock.send_multipart([command] + payload)
+        if recv:
+            result = sock.recv_multipart()
+        else:
+            result = None
+    return result
 
 ensure = core.ensure
 
