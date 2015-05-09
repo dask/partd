@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-from partd.numpy import create, put, get, destroy, partd, ensure
+from partd.numpy import create, put, get, destroy, partd
 from partd.core import lock, filename
 
 import numpy as np
