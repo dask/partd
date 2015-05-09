@@ -1,4 +1,4 @@
-from partd import create, put, get, destroy, ensure, partd
+from partd import create, put, get, destroy, ensure, partd, exists
 from partd.core import lock, token, escape_filename, filename
 from partd import core
 import os
@@ -42,6 +42,12 @@ def test_ensure():
 
     assert (pth, 'x') not in core._ensured
 
+
+def test_exists():
+    with partd() as pth:
+        put(pth, {'x': b'124'})
+        assert exists(pth, 'x')
+        assert not exists(pth, 'y')
 
 def test_filenames():
     assert token('hello') == 'hello'

@@ -114,6 +114,11 @@ def ensure(path, key, data):
             f.write(data)
 
 
+def exists(path, key):
+    """ Key exists in path """
+    return os.path.exists(filename(path, key))
+
+
 @contextmanager
 def do_nothing(*args, **kwargs):
     yield
