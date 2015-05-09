@@ -91,8 +91,8 @@ class Server(object):
                     payload = self.socket.recv_multipart()
 
                 address, command, payload = payload[0], payload[1], payload[2:]
-                log(self.address, 'Receive command', command)
                 if command == b'close':
+                    log('Server closes')
                     self.status = 'closed'
                     self.ack(address)
                     break
@@ -112,7 +112,6 @@ class Server(object):
                     self.ack(address, flow_control=False)
 
                 elif command == b'syn':
-                    log('syn-ack')
                     self.ack(address)
 
                 else:
@@ -123,7 +122,6 @@ class Server(object):
         if not isinstance(result, list):
             result = [result]
         with self._socket_lock:
-            log('Server sends', address)
             self.socket.send_multipart([address] + result)
 
     def _write_to_disk(self):
@@ -142,27 +140,39 @@ class Server(object):
 
     def ack(self, address, flow_control=True):
         if flow_control and self._out_disk_buffer.full():
+            log('Out disk buffer full - Flow control in effect',
+                'Freezing address', address)
             self._frozen_sockets.put(address)
         else:
-            log('server sends ack')
+            log('Server sends ack')
             self.send_to_client(address, b'ack')
 
     def _free_frozen_sockets(self):
         while self.status != 'closed':
             try:
                 data = self._frozen_sockets.get(timeout=1)
+                self._frozen_sockets.put(data)  # put back in for the moment
             except Empty:
                 continue
             else:
+                log('Freeing frozen sockets, waiting on disk buffer to clear')
                 self._out_disk_buffer.join()
+                log('Disk buffer cleared, sending acks to %d sockets' %
+                        self._frozen_sockets.qsize())
                 while not self._frozen_sockets.empty():
-                    self.ack(self._frozen_sockets.get())
+                    addr = self._frozen_sockets.get()
+                    log('Free', addr)
+                    self.ack(addr)
 
     def put(self, data):
+        total_mem = 0
         for k, v in data.items():
             self.inmem[k].append(v)
             self.lengths[k] += len(v)
-            self.memory_usage += len(v)
+            total_mem += len(v)
+        self.memory_usage += total_mem
+
+        log('Server puts %d keys' % len(data.keys()), 'of %d bytes' % total_mem)
 
         if self.memory_usage > self.available_memory:
             keys = keys_to_flush(self.lengths, 0.25)
@@ -187,6 +197,7 @@ class Server(object):
                 block = True
         assert isinstance(keys, (tuple, list))
         payload = dict((key, ''.join(self.inmem[key])) for key in keys)
+        log('Put data into out-disk-buffer', 'nkeys', len(keys))
         self._out_disk_buffer.put(payload)
 
         for key in keys:
@@ -195,9 +206,11 @@ class Server(object):
             del self.lengths[key]
 
         if block:
+            log('Blocking on out disk buffer from flush')
             self._out_disk_buffer.join()
 
     def get(self, keys):
+        log('Server gets keys', keys)
         self._out_disk_buffer.join()  # block until everything is written
         with self._lock:
             from_disk = core.get(self.path, keys, lock=False)
@@ -206,6 +219,7 @@ class Server(object):
         return result
 
     def close(self):
+        log('Server closes')
         self.status = 'closed'
         self._file_lock.release()
 
@@ -260,11 +274,13 @@ def destroy(path, server=None):
 
 
 def get(path, keys):
+    log('Client gets', path, keys)
     keys = list(map(serialize_key, keys))
     return send(path, b'get', keys, recv=True)
 
 
 def put(path, data):
+    log('Client puts', path, str(len(data)) + ' keys')
     data = keymap(serialize_key, data)
     payload = list(chain.from_iterable(data.items()))
     send(path, b'put', payload)
