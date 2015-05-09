@@ -11,7 +11,7 @@ import shutil
 def test_partd():
     dt = np.dtype([('a', 'i4'), ('b', 'i2'), ('c', 'f8')])
 
-    with partd(dtype=dt) as path:
+    with partd() as path:
         put(path, {'a': np.array([10, 20, 30], dtype=dt['a']),
                    'b': np.array([ 1,  2,  3], dtype=dt['b']),
                    'c': np.array([.1, .2, .3], dtype=dt['c'])})
@@ -30,3 +30,11 @@ def test_partd():
             result = get(path, ['a'], lock=False)
 
     assert not os.path.exists(path)
+
+
+def test_nested():
+    with partd() as path:
+        put(path, {'x': np.array([1, 2, 3]),
+                   ('y', 1): np.array([4, 5, 6]),
+                   ('z', 'a', 3): np.array([.1, .2, .3])})
+        assert (get(path, [('z', 'a', 3)]) == np.array([.1, .2, .3])).all()

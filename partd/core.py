@@ -92,7 +92,7 @@ def destroy(path):
 
 _ensured = set()
 
-def ensure(path, key, data):
+def ensure(path, key, data, put=put):
     """ Write once key-value assignment.  Use for metadata storage.
 
     You may write a key once.  You may not append.
@@ -110,8 +110,7 @@ def ensure(path, key, data):
         return
     else:
         _ensured.add((path, key))
-        with open(filename(path, key), 'w') as f:
-            f.write(data)
+        put(path, {key: data}, lock=False)
 
 
 def exists(path, key):
