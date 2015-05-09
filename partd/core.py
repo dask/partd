@@ -87,6 +87,30 @@ def destroy(path):
     shutil.rmtree(path)
 
 
+_ensured = set()
+
+def ensure(path, key, data):
+    """ Write once key-value assignment.  Use for metadata storage.
+
+    You may write a key once.  You may not append.
+    Subsequent writes of the same key-value pair are very cheap
+
+    >>> ensure('path', 'x', b'123')  # doctest: +SKIP
+    >>> ensure('path', 'x', b'123')  # doctest: +SKIP
+
+    Safe to get without lock
+
+    >>> get('path', ['x'], lock=False)  # doctest: +SKIP
+    b'123'
+    """
+    if key in _ensured:
+        return
+    with lock(path):
+        if key not in _ensured:
+            _ensured.add(key)
+            put(path, {key: data}, lock=False)
+
+
 @contextmanager
 def do_nothing(*args, **kwargs):
     yield

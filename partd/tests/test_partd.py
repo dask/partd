@@ -1,5 +1,5 @@
-from partd import create, put, get, destroy, filename
-from partd.core import lock, token, escape_filename
+from partd import create, put, get, destroy, ensure
+from partd.core import lock, token, escape_filename, filename
 import os
 import shutil
 from contextlib import contextmanager
@@ -42,6 +42,15 @@ def test_key_tuple():
     with part() as pth:
         put(pth, {('a', 'b'): b'123'})
         assert os.path.exists(os.path.join(pth, 'a', 'b'))
+
+
+def test_ensure():
+    with part() as pth:
+        ensure(pth, 'x', b'123')
+        ensure(pth, 'x', b'123')
+        ensure(pth, 'x', b'123')
+
+        assert get(pth, ['x']) == [b'123']
 
 
 def test_filenames():
