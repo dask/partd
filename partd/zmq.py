@@ -11,6 +11,7 @@ from collections import defaultdict
 from contextlib import contextmanager
 from threading import Thread, Lock
 from toolz import keymap
+from datetime import datetime
 from . import core
 from .compatibility import Queue, Empty
 
@@ -18,12 +19,9 @@ context = zmq.Context()
 
 tuple_sep = '-|-'
 
-with open('log', 'w') as f:  # delete file
-    pass
-
 def log(*args):
     with open('log', 'a') as f:
-        print(*args, file=f)
+        print(datetime.now(), *args, file=f)
 
 @contextmanager
 def logduration(message, nbytes=None):
@@ -212,6 +210,33 @@ def destroy(path, server=None):
     core.destroy(path)
 
 
+def get(path, keys):
+    sock = socket(path)
+    keys = list(map(serialize_key, keys))
+    sock.send_multipart([b'get'] + keys)
+    return sock.recv_multipart()
+
+
+def put(path, data):
+    sock = socket(path)
+    data = keymap(serialize_key, data)
+    payload = list(chain.from_iterable(data.items()))
+    sock.send_multipart([b'put'] + payload)
+
+ensure = core.ensure
+
+@contextmanager
+def partd(path=None, **kwargs):
+    if path is None:
+        path = 'tmp.partd'
+    server = create(path, **kwargs)
+
+    try:
+        yield path, server
+    finally:
+        destroy(path, server)
+
+
 def serialize_key(key):
     """
 
@@ -239,30 +264,3 @@ def deserialize_key(text):
         return tuple(text.split(tuple_sep))
     else:
         return text
-
-
-def get(path, keys):
-    sock = socket(path)
-    keys = list(map(serialize_key, keys))
-    sock.send_multipart([b'get'] + keys)
-    return sock.recv_multipart()
-
-
-def put(path, data):
-    sock = socket(path)
-    data = keymap(serialize_key, data)
-    payload = list(chain.from_iterable(data.items()))
-    sock.send_multipart([b'put'] + payload)
-
-ensure = core.ensure
-
-@contextmanager
-def partd(path=None, **kwargs):
-    if path is None:
-        path = 'tmp.partd'
-    server = create(path, **kwargs)
-
-    try:
-        yield path, server
-    finally:
-        destroy(path, server)
