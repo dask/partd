@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import os
 import shutil
 import locket
+import string
 from toolz import memoize
 from contextlib import contextmanager
 
@@ -16,20 +17,38 @@ def lock(path):
     return locks[path]
 
 
+# http://stackoverflow.com/questions/295135/turn-a-string-into-a-valid-filename-in-python
+valid_chars = "-_.() " + string.ascii_letters + string.digits + os.path.sep
+
+
 def escape_filename(fn):
     """ Escape text so that it is a valid filename
 
-    >>> escape_filename('Foo!/bar')
+    >>> escape_filename('Foo!bar?')
     'Foobar'
 
-    http://stackoverflow.com/questions/295135/turn-a-string-into-a-valid-filename-in-python
     """
-    import string
-    valid_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
     return ''.join(filter(valid_chars.__contains__, fn))
 
+
 def filename(path, key):
-    return os.path.join(path, escape_filename(str(key)))
+    return os.path.join(path, escape_filename(token(key)))
+
+
+def token(key):
+    """
+
+    >>> token('hello')
+    'hello'
+    >>> token(('hello', 'world'))  # doctest: +SKIP
+    'hello/world'
+    """
+    if isinstance(key, str):
+        return key
+    elif isinstance(key, tuple):
+        return os.path.join(*map(token, key))
+    else:
+        return str(key)
 
 
 def create(path):
@@ -42,7 +61,10 @@ def put(path, data, lock=lock):
         lock = do_nothing
     with lock(path):
         for k, v in data.items():
-            with open(filename(path, k), 'ab') as f:
+            fn = filename(path, k)
+            if not os.path.exists(os.path.dirname(fn)):
+                os.makedirs(os.path.dirname(fn))
+            with open(fn, 'ab') as f:
                 f.write(v)
 
 
