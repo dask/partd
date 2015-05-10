@@ -66,6 +66,7 @@ def put(path, data, lock=lock):
                 os.makedirs(os.path.dirname(fn))
             with open(fn, 'ab') as f:
                 f.write(v)
+                os.fsync(f)
 
 
 def get(path, keys, lock=lock):
