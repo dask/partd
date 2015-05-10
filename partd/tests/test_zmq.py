@@ -70,7 +70,7 @@ def test_flow_control():
     if os.path.exists('bar'):
         core.destroy('bar')
     core.create('bar')
-    s = Server('bar', available_memory=1)
+    s = Server('bar', available_memory=1, n_outstanding_writes=3)
     try:
         listen_thread = Thread(target=s.listen)
         listen_thread.start()
@@ -104,7 +104,7 @@ def test_flow_control():
         free_frozen_sockets_thread = Thread(target=s._free_frozen_sockets)
         free_frozen_sockets_thread.start()
 
-        sleep(0.01)
+        sleep(0.2)
         assert not held_put.isAlive()
         assert s._frozen_sockets.empty()
     finally:

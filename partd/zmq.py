@@ -47,7 +47,8 @@ def logerrors():
 
 
 class Server(object):
-    def __init__(self, path, address=None, available_memory=1e9):
+    def __init__(self, path, address=None, available_memory=1e9,
+                 n_outstanding_writes=10):
         self.path = path
         self.inmem = defaultdict(list)
         self.lengths = defaultdict(lambda: 0)
@@ -63,7 +64,7 @@ class Server(object):
         self.available_memory=available_memory
         self.memory_usage = 0
         self.status = 'run'
-        self._out_disk_buffer = Queue(maxsize=3)
+        self._out_disk_buffer = Queue(maxsize=n_outstanding_writes)
         self._frozen_sockets = Queue()
 
         self._file_lock = core.lock(path)
@@ -133,7 +134,8 @@ class Server(object):
             else:
                 with self._lock:
                     nbytes = sum(map(len, data.values()))
-                    with logduration("Write %d files" % len(data),
+                    with logduration("Write %d files %d bytes" %
+                                     (len(data), nbytes),
                                      nbytes=nbytes):
                         core.put(self.path, data, lock=False)
                 self._out_disk_buffer.task_done()
@@ -174,8 +176,8 @@ class Server(object):
 
         log('Server puts %d keys' % len(data.keys()), 'of %d bytes' % total_mem)
 
-        if self.memory_usage > self.available_memory:
-            keys = keys_to_flush(self.lengths, 0.25)
+        while self.memory_usage > self.available_memory:
+            keys = keys_to_flush(self.lengths, 0.1, maxcount=20)
             self.flush(keys)
 
     def flush(self, keys=None, block=None):
@@ -224,7 +226,7 @@ class Server(object):
         self._file_lock.release()
 
 
-def keys_to_flush(lengths, fraction=0.4):
+def keys_to_flush(lengths, fraction=0.1, maxcount=100000):
     """ Which keys to remove
 
     >>> lengths = {'a': 20, 'b': 10, 'c': 15, 'd': 15,
@@ -232,13 +234,16 @@ def keys_to_flush(lengths, fraction=0.4):
     >>> keys_to_flush(lengths, 0.5)
     ['f', 'a']
     """
-    tophalf = topk(max(len(lengths) / 2, 1),
-                       lengths.items(),
-                       key=1)
+    top = topk(max(len(lengths) / 2, 1),
+               lengths.items(),
+               key=1)
     total = sum(lengths.values())
-    cutoff = max(1, bisect(list(accumulate(add, pluck(1, tophalf))),
-                    total * fraction))
-    return [k for k, v in tophalf[:cutoff]]
+    cutoff = min(maxcount, max(1,
+                   bisect(list(accumulate(add, pluck(1, top))),
+                          total * fraction)))
+    result = [k for k, v in top[:cutoff]]
+    assert result
+    return result
 
 
 def create(path, **kwargs):
