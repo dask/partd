@@ -31,10 +31,22 @@ def tmpfile(extension=''):
 
 
 def frame(bytes):
+    """ Pack the length of the bytes in front of the bytes
+
+    TODO: This does a full copy.  This should maybe be inlined somehow
+    whereever this gets used instead.  My laptop shows a data bandwidth of
+    2GB/s
+    """
     return struct.pack('Q', len(bytes)) + bytes
 
 
 def framesplit(bytes):
+    """ Split buffer into frames of concatenated chunks
+
+    >>> data = frame(b'Hello') + frame(b'World')
+    >>> list(framesplit(data))  # doctest: +SKIP
+    [b'Hello', b'World']
+    """
     i = 0; n = len(bytes)
     chunks = list()
     while i < n:
