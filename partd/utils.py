@@ -2,6 +2,7 @@ from contextlib import contextmanager
 import os
 import shutil
 import tempfile
+import struct
 
 
 def raises(exc, lamda):
@@ -27,3 +28,17 @@ def tmpfile(extension=''):
                 shutil.rmtree(filename)
             else:
                 os.remove(filename)
+
+
+def frame(bytes):
+    return struct.pack('Q', len(bytes)) + bytes
+
+
+def framesplit(bytes):
+    i = 0; n = len(bytes)
+    chunks = list()
+    while i < n:
+        nbytes = struct.unpack('Q', bytes[i:i+8])[0]
+        i += 8
+        yield bytes[i: i + nbytes]
+        i += nbytes
