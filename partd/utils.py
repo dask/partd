@@ -54,3 +54,16 @@ def framesplit(bytes):
         i += 8
         yield bytes[i: i + nbytes]
         i += nbytes
+
+
+def partition_all(n, bytes):
+    """
+
+    >>> list(partition_all(2, b'Hello'))
+    ['He', 'll', 'o']
+    """
+    if len(bytes) < n:  # zero copy fast common case
+        yield bytes
+    else:
+        for i in range(0, len(bytes), n):
+            yield bytes[i: i+n]
