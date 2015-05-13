@@ -50,6 +50,7 @@ class Server(object):
     def __init__(self, path, address=None, available_memory=1e9,
                  n_outstanding_writes=10, start=True):
         self.path = path
+        self.file = PartdFile(path)
         self.inmem = defaultdict(list)
         self.lengths = defaultdict(lambda: 0)
         self.socket = context.socket(zmq.ROUTER)
@@ -58,7 +59,7 @@ class Server(object):
             address = 'ipc://server-%s' % str(uuid.uuid1())
         self.address = address
         self.socket.bind(self.address)
-        with open(core.filename(self.path, '.address'), 'w') as f:
+        with open(self.file.filename('.address'), 'w') as f:
             f.write(self.address)
 
         self.available_memory=available_memory
@@ -67,8 +68,7 @@ class Server(object):
         self._out_disk_buffer = Queue(maxsize=n_outstanding_writes)
         self._frozen_sockets = Queue()
 
-        self._file_lock = core.lock(path)
-        self._file_lock.acquire()
+        self.file.lock.acquire()
         self._lock = Lock()
         self._socket_lock = Lock()
 
@@ -116,6 +116,12 @@ class Server(object):
                     log('get', keys)
                     result = self.get(keys)
                     self.send_to_client(address, result)
+                    self.ack(address, flow_control=False)
+
+                elif command == b'delete':
+                    keys = list(map(deserialize_key, payload))
+                    log('delete', keys)
+                    self.delete(keys)
                     self.ack(address, flow_control=False)
 
                 elif command == b'syn':
@@ -180,11 +186,25 @@ class Server(object):
             total_mem += len(v)
         self.memory_usage += total_mem
 
-        log('Server appends %d keys' % len(data.keys()), 'of %d bytes' % total_mem)
+        log('Server appends %d keys' % len(data), 'of %d bytes' % total_mem)
 
         while self.memory_usage > self.available_memory:
             keys = keys_to_flush(self.lengths, 0.1, maxcount=20)
             self.flush(keys)
+
+    def delete(self, keys):
+        released = 0
+        for k in keys:
+            released += sum(map(len, self.inmem[k]))
+            del self.inmem[k]
+
+        self.memory_usage -= released
+
+        log('Server deleted %d keys' % len(keys),
+            '. Released %d bytes' % released)
+
+        # TODO: delete file from disk
+
 
     def flush(self, keys=None, block=None):
         """ Flush keys to disk
@@ -221,7 +241,7 @@ class Server(object):
         log('Server gets keys', keys)
         self._out_disk_buffer.join()  # block until everything is written
         with self._lock:
-            from_disk = core.get(self.path, keys, lock=False)
+            from_disk = self.file.get(keys, lock=False)
             result = [from_disk[i] + ''.join(self.inmem[k])
                           for i, k in enumerate(keys)]
         return result
@@ -229,7 +249,7 @@ class Server(object):
     def close(self):
         log('Server closes')
         self.status = 'closed'
-        self._file_lock.release()
+        self.file.lock.release()
 
     def __enter__(self):
         self.start()
@@ -406,8 +426,10 @@ class PartdSharedServer(PartdInterface):
         payload = list(chain.from_iterable(data.items()))
         self.send(b'append', payload)
 
-    def delete(self, keys):
-        raise NotImplementedError()
+    def _delete(self, keys):
+        log('Client deletes', self.file.path, str(len(keys)) + ' keys')
+        keys = map(serialize_key, keys)
+        self.send(b'delete', keys)
 
     def _iset(self, key, value):
         return self.file._iset(key, value)

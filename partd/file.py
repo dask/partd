@@ -60,7 +60,7 @@ class PartdFile(PartdInterface):
         with open(self.filename(key), 'w') as f:
             f.write(value)
 
-    def delete(self, keys, lock=True):
+    def _delete(self, keys, lock=True):
         if lock:
             self.lock.acquire()
         try:

@@ -115,6 +115,16 @@ def test_flow_control():
 from partd.zmq import PartdFile, PartdSharedServer
 
 
+@contextmanager
+def partd_server(path, **kwargs):
+    if os.path.exists(path):
+        shutil.rmtree(path)
+    os.mkdir(path)
+    with Server(path, **kwargs) as server:
+        with PartdSharedServer(path) as p:
+            yield (p, server)
+
+
 def test_partd_object():
     if os.path.exists('foo'):
         shutil.rmtree('foo')
@@ -130,14 +140,13 @@ def test_partd_object():
     assert not os.path.exists(p.file.path)
 
 
-@contextmanager
-def partd_server(path, **kwargs):
-    if os.path.exists(path):
-        shutil.rmtree(path)
-    os.mkdir(path)
-    with Server(path, **kwargs) as server:
-        with PartdSharedServer(path) as p:
-            yield (p, server)
+def test_delete():
+    with partd_server('foo', available_memory=100) as (p, server):
+        p.append({'x': b'Hello'})
+        assert p.get('x') == b'Hello'
+        p.delete(['x'])
+        assert p.get('x') == b''
+
 
 def test_iset():
     with partd() as (path, server):
