@@ -57,10 +57,15 @@ def framesplit(bytes):
 
 
 def partition_all(n, bytes):
-    """
+    """ Partition bytes into evenly sized blocks
+
+    The final block holds the remainder and so may not be of equal size
 
     >>> list(partition_all(2, b'Hello'))
     ['He', 'll', 'o']
+
+    See Also:
+        toolz.partition_all
     """
     if len(bytes) < n:  # zero copy fast common case
         yield bytes

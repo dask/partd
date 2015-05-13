@@ -48,7 +48,7 @@ def logerrors():
 
 class Server(object):
     def __init__(self, path, address=None, available_memory=1e9,
-                 n_outstanding_writes=10):
+                 n_outstanding_writes=10, start=True):
         self.path = path
         self.inmem = defaultdict(list)
         self.lengths = defaultdict(lambda: 0)
@@ -63,7 +63,7 @@ class Server(object):
 
         self.available_memory=available_memory
         self.memory_usage = 0
-        self.status = 'run'
+        self.status = 'created'
         self._out_disk_buffer = Queue(maxsize=n_outstanding_writes)
         self._frozen_sockets = Queue()
 
@@ -72,14 +72,19 @@ class Server(object):
         self._lock = Lock()
         self._socket_lock = Lock()
 
+        if start:
+            self.start()
+
     def start(self):
-        log('Start server at', self.address)
-        self._listen_thread = Thread(target=self.listen)
-        self._listen_thread.start()
-        self._write_to_disk_thread = Thread(target=self._write_to_disk)
-        self._write_to_disk_thread.start()
-        self._free_frozen_sockets_thread = Thread(target=self._free_frozen_sockets)
-        self._free_frozen_sockets_thread.start()
+        if self.status != 'run':
+            self.status = 'run'
+            log('Start server at', self.address)
+            self._listen_thread = Thread(target=self.listen)
+            self._listen_thread.start()
+            self._write_to_disk_thread = Thread(target=self._write_to_disk)
+            self._write_to_disk_thread.start()
+            self._free_frozen_sockets_thread = Thread(target=self._free_frozen_sockets)
+            self._free_frozen_sockets_thread.start()
 
     def listen(self):
         with logerrors():
@@ -94,15 +99,16 @@ class Server(object):
                 address, command, payload = payload[0], payload[1], payload[2:]
                 if command == b'close':
                     log('Server closes')
-                    self.status = 'closed'
                     self.ack(address)
+                    self.status = 'closed'
                     break
+                    # self.close()
 
-                elif command == b'put':
+                elif command == b'append':
                     keys, values = payload[::2], payload[1::2]
                     keys = list(map(deserialize_key, keys))
                     data = dict(zip(keys, values))
-                    self.put(data)
+                    self.append(data)
                     self.ack(address)
 
                 elif command == b'get':
@@ -166,7 +172,7 @@ class Server(object):
                     log('Free', addr)
                     self.ack(addr)
 
-    def put(self, data):
+    def append(self, data):
         total_mem = 0
         for k, v in data.items():
             self.inmem[k].append(v)
@@ -174,7 +180,7 @@ class Server(object):
             total_mem += len(v)
         self.memory_usage += total_mem
 
-        log('Server puts %d keys' % len(data.keys()), 'of %d bytes' % total_mem)
+        log('Server appends %d keys' % len(data.keys()), 'of %d bytes' % total_mem)
 
         while self.memory_usage > self.available_memory:
             keys = keys_to_flush(self.lengths, 0.1, maxcount=20)
@@ -199,7 +205,7 @@ class Server(object):
                 block = True
         assert isinstance(keys, (tuple, list))
         payload = dict((key, ''.join(self.inmem[key])) for key in keys)
-        log('Put data into out-disk-buffer', 'nkeys', len(keys))
+        log('append data into out-disk-buffer', 'nkeys', len(keys))
         self._out_disk_buffer.put(payload)
 
         for key in keys:
@@ -224,6 +230,13 @@ class Server(object):
         log('Server closes')
         self.status = 'closed'
         self._file_lock.release()
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, *args):
+        self.close()
 
 
 def keys_to_flush(lengths, fraction=0.1, maxcount=100000):
@@ -284,11 +297,11 @@ def get(path, keys):
     return send(path, b'get', keys, recv=True)
 
 
-def put(path, data):
-    log('Client puts', path, str(len(data)) + ' keys')
+def append(path, data):
+    log('Client appends', path, str(len(data)) + ' keys')
     data = keymap(serialize_key, data)
     payload = list(chain.from_iterable(data.items()))
-    send(path, b'put', payload)
+    send(path, b'append', payload)
 
 
 def send(path, command, payload, recv=False, ack_required=True):
@@ -346,3 +359,61 @@ def deserialize_key(text):
         return tuple(text.split(tuple_sep))
     else:
         return text
+
+
+from .core import PartdInterface
+from .file import PartdFile
+
+
+class PartdSharedServer(PartdInterface):
+    def __init__(self, path, **kwargs):
+        self.file = PartdFile(path)
+        addr = self.file.get('.address', lock=False)
+        assert addr
+
+        self.socket = context.socket(zmq.DEALER)
+        self.socket.connect(addr)
+        self.send(b'syn', [], ack_required=False)
+        PartdInterface.__init__(self)
+
+    def __getstate__(self):
+        return {'path': self.file.path}
+
+    def __setstate__(self, state):
+        PartdInterface.__setstate__(state)
+        self.__init__(state['path'])
+
+    def send(self, command, payload, recv=False, ack_required=True):
+        if ack_required:
+            ack = self.socket.recv_multipart()
+            assert ack == [b'ack']
+        log('Client sends command', command)
+        self.socket.send_multipart([command] + payload)
+        if recv:
+            result = self.socket.recv_multipart()
+        else:
+            result = None
+        return result
+
+    def _get(self, keys):
+        log('Client gets', self.file.path, keys)
+        keys = list(map(serialize_key, keys))
+        return self.send(b'get', keys, recv=True)
+
+    def append(self, data):
+        log('Client appends', self.file.path, str(len(data)) + ' keys')
+        data = keymap(serialize_key, data)
+        payload = list(chain.from_iterable(data.items()))
+        self.send(b'append', payload)
+
+    def delete(self, keys):
+        raise NotImplementedError()
+
+    def _iset(self, key, value):
+        return self.file._iset(key, value)
+
+    def drop(self):
+        return self.file.drop()
+
+    def close_server(self):
+        self.send(b'close', [])

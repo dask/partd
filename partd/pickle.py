@@ -49,3 +49,12 @@ def get(path, keys, get=core.get, **kwargs):
 def ensure(path, key, value, protocol=pickle.HIGHEST_PROTOCOL,
            ensure=core.ensure):
     ensure(path, key, pickle.dumps(value, protocol=protocol))
+
+
+from .encode import PartdEncode
+from functools import partial
+
+PartdPickle = partial(PartdEncode,
+                      partial(pickle.dumps, protocol=pickle.HIGHEST_PROTOCOL),
+                      pickle.loads,
+                      join=sum)

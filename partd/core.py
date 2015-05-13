@@ -135,3 +135,39 @@ def partd(path='tmp.partd', create=create, destroy=destroy, **kwargs):
         yield path
     finally:
         destroy(path)
+
+
+class PartdInterface(object):
+    def __init__(self):
+        self._iset_seen = set()
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self._iset_seen = set()
+
+    def iset(self, key, value):
+        if key in self._iset_seen:
+            return
+        else:
+            self._iset(key, value)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.drop()
+
+    def iget(self, key):
+        return self._get([key], lock=False)[0]
+
+    def get(self, keys, **kwargs):
+        if not isinstance(keys, (tuple, list, set)):
+            return self._get([keys], **kwargs)[0]
+        return self._get(keys, **kwargs)
+
+    def pop(self, keys, **kwargs):
+        with self.partd.lock:
+            result = self.partd.get(keys, lock=False)
+            self.partd.delete(keys, lock=False)
+        return result
+

@@ -1,5 +1,5 @@
-from partd.zmq import (create, destroy, put, get, Server, keys_to_flush, partd,
-        ensure, socket)
+from partd.zmq import (create, destroy, append, get, Server, keys_to_flush, partd,
+        ensure, socket, log)
 
 from partd import core
 from threading import Thread
@@ -17,8 +17,8 @@ def test_partd():
         assert os.path.exists(core.filename(path, '.address'))
         assert server.available_memory == 100
 
-        put(path, {'x': b'Hello', 'y': b'abc'})
-        put(path, {'x': b'World!', 'y': b'def'})
+        append(path, {'x': b'Hello', 'y': b'abc'})
+        append(path, {'x': b'World!', 'y': b'def'})
 
         result = get(path, ['y', 'x'])
         assert result == [b'abcdef', b'HelloWorld!']
@@ -32,9 +32,9 @@ def test_server():
     s = Server('foo', available_memory=10)
     try:
         s.start()
-        s.put({'x': b'abc', 'y': b'1234'})
+        s.append({'x': b'abc', 'y': b'1234'})
         assert s.memory_usage == 7
-        s.put({'x': b'def', 'y': b'5678'})
+        s.append({'x': b'def', 'y': b'5678'})
         assert s.memory_usage < s.available_memory
 
         assert s.get(['x']) == [b'abcdef']
@@ -61,7 +61,7 @@ def test_keys_to_flush():
 
 def test_tuple_keys():
     with partd() as (path, server):
-        put(path, {('x', 'y'): b'123'})
+        append(path, {('x', 'y'): b'123'})
         assert get(path, [('x', 'y')]) == [b'123']
 
 
@@ -70,7 +70,7 @@ def test_flow_control():
     if os.path.exists('bar'):
         core.destroy('bar')
     core.create('bar')
-    s = Server('bar', available_memory=1, n_outstanding_writes=3)
+    s = Server('bar', available_memory=1, n_outstanding_writes=3, start=False)
     try:
         listen_thread = Thread(target=s.listen)
         listen_thread.start()
@@ -83,19 +83,19 @@ def test_flow_control():
         assert socket('bar')
         assert socket('bar')
         assert socket('bar')
-        put('bar', {'x': '12345'})
-        sleep(0.01)
+        append('bar', {'x': '12345'})
+        sleep(0.1)
         assert s._out_disk_buffer.qsize() == 1
-        put('bar', {'x': '12345'})
-        put('bar', {'x': '12345'})
+        append('bar', {'x': '12345'})
+        append('bar', {'x': '12345'})
         sleep(0.01)
         assert s._out_disk_buffer.qsize() == 3
 
-        held_put = Thread(target=put, args=('bar', {'x': b'123'}))
-        held_put.start()
+        held_append = Thread(target=append, args=('bar', {'x': b'123'}))
+        held_append.start()
 
         sleep(0.01)
-        assert held_put.isAlive()  # held!
+        assert held_append.isAlive()  # held!
 
         assert not s._frozen_sockets.empty()
 
@@ -105,7 +105,39 @@ def test_flow_control():
         free_frozen_sockets_thread.start()
 
         sleep(0.2)
-        assert not held_put.isAlive()
+        assert not held_append.isAlive()
         assert s._frozen_sockets.empty()
     finally:
         s.close()
+
+
+from partd.zmq import PartdFile, PartdSharedServer
+
+
+def test_partd_object():
+    if os.path.exists('foo'):
+        shutil.rmtree('foo')
+    with PartdFile('foo') as pf:
+        with Server('foo') as server:
+            with PartdSharedServer('foo', available_memory=100) as p:
+                assert os.path.exists(p.file.path)
+                assert 'ipc://server' in p.file.get('.address', lock=False)
+
+                p.append({'x': b'Hello', 'y': b'abc'})
+                p.append({'x': b'World!', 'y': b'def'})
+
+                result = p.get(['y', 'x'])
+                assert result == [b'abcdef', b'HelloWorld!']
+    assert not os.path.exists(p.file.path)
+
+
+def test_iset():
+    with partd() as (path, server):
+        ensure(path, 'x', b'111')
+        ensure(path, 'x', b'111')
+        assert get(path, ['x']) == [b'111']
+
+def test_tuple_keys():
+    with partd() as (path, server):
+        append(path, {('x', 'y'): b'123'})
+        assert get(path, [('x', 'y')]) == [b'123']

@@ -72,3 +72,40 @@ def get(path, keys, get=core.get, **kwargs):
     bytes = get(path, keys, **kwargs)
     dts = dtypes(path, keys, get=get, **kwargs)
     return list(map(np.frombuffer, bytes, dts))
+
+
+from .core import PartdInterface
+from toolz import valmap
+
+
+class PartdNumpy(PartdInterface):
+    def __init__(self, partd):
+        self.partd = partd
+
+    def __getstate__(self):
+        return {'path': self.path, 'partd': self.partd}
+
+    def append(self, data, **kwargs):
+        for k, v in data.items():
+            self.partd._iset(k + '.dtype', str(v.dtype))
+        self.partd.append(valmap(np.ndarray.tobytes, data), **kwargs)
+
+    def _get(self, keys, **kwargs):
+        bytes = self.partd._get(keys, **kwargs)
+        dtypes = self.partd._get([extend(key, '.dtype') for key in keys],
+                                 lock=False)
+        return list(map(np.frombuffer, bytes, dtypes))
+
+    def delete(self, keys, **kwargs):
+        keys2 = [extend(key, '.dtype') for key in keys]
+        self.partd.delete(keys2, **kwargs)
+
+    def _iset(self, key, value):
+        return self.partd._iset(key, value)
+
+    def drop(self):
+        return self.partd.drop()
+
+    @property
+    def lock(self):
+        return self.partd.lock
