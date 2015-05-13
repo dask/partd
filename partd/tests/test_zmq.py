@@ -4,6 +4,7 @@ from partd.zmq import (create, destroy, append, get, Server, keys_to_flush, part
 from partd import core
 from threading import Thread
 from time import sleep
+from contextlib import contextmanager
 
 import os
 import shutil
@@ -117,19 +118,26 @@ from partd.zmq import PartdFile, PartdSharedServer
 def test_partd_object():
     if os.path.exists('foo'):
         shutil.rmtree('foo')
-    with PartdFile('foo') as pf:
-        with Server('foo') as server:
-            with PartdSharedServer('foo', available_memory=100) as p:
-                assert os.path.exists(p.file.path)
-                assert 'ipc://server' in p.file.get('.address', lock=False)
+    with partd_server('foo', available_memory=100) as (p, server):
+        assert os.path.exists(p.file.path)
+        assert 'ipc://server' in p.file.get('.address', lock=False)
 
-                p.append({'x': b'Hello', 'y': b'abc'})
-                p.append({'x': b'World!', 'y': b'def'})
+        p.append({'x': b'Hello', 'y': b'abc'})
+        p.append({'x': b'World!', 'y': b'def'})
 
-                result = p.get(['y', 'x'])
-                assert result == [b'abcdef', b'HelloWorld!']
+        result = p.get(['y', 'x'])
+        assert result == [b'abcdef', b'HelloWorld!']
     assert not os.path.exists(p.file.path)
 
+
+@contextmanager
+def partd_server(path, **kwargs):
+    if os.path.exists(path):
+        shutil.rmtree(path)
+    os.mkdir(path)
+    with Server(path, **kwargs) as server:
+        with PartdSharedServer(path) as p:
+            yield (p, server)
 
 def test_iset():
     with partd() as (path, server):
