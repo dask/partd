@@ -43,11 +43,6 @@ def token(key):
         return str(key)
 
 
-@contextmanager
-def do_nothing(*args, **kwargs):
-    yield
-
-
 class Interface(object):
     def __init__(self):
         self._iset_seen = set()

@@ -321,6 +321,7 @@ class Shared(Interface):
         self.socket = context.socket(zmq.DEALER)
         self.socket.connect(addr)
         self.send(b'syn', [], ack_required=False)
+        self.lock = NotALock()  # Server sequentializes everything
         Interface.__init__(self)
 
     def __getstate__(self):
@@ -342,18 +343,22 @@ class Shared(Interface):
             result = None
         return result
 
-    def _get(self, keys):
+    def _get(self, keys, lock=None):
+        """
+
+        Lock argument is ignored.  Everything is sequential (I think)
+        """
         log('Client gets', self.file.path, keys)
         keys = list(map(serialize_key, keys))
         return self.send(b'get', keys, recv=True)
 
-    def append(self, data):
+    def append(self, data, lock=None):
         log('Client appends', self.file.path, str(len(data)) + ' keys')
         data = keymap(serialize_key, data)
         payload = list(chain.from_iterable(data.items()))
         self.send(b'append', payload)
 
-    def _delete(self, keys):
+    def _delete(self, keys, lock=None):
         log('Client deletes', self.file.path, str(len(keys)) + ' keys')
         keys = map(serialize_key, keys)
         self.send(b'delete', keys)
@@ -366,3 +371,14 @@ class Shared(Interface):
 
     def close_server(self):
         self.send(b'close', [])
+
+
+class NotALock(object):
+    def acquire(self): pass
+    def release(self): pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        pass

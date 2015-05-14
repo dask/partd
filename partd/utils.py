@@ -80,3 +80,8 @@ def ignoring(*exc):
         yield
     except exc:
         pass
+
+
+@contextmanager
+def do_nothing(*args, **kwargs):
+    yield
