@@ -22,7 +22,7 @@ class File(Interface):
         Interface.__setstate__(self, state)
         self.lock = locket.lock_file(self.filename('.lock'))
 
-    def append(self, data, lock=True, **kwargs):
+    def append(self, data, lock=True, fsync=True, **kwargs):
         if lock: self.lock.acquire()
         try:
             for k, v in data.items():
@@ -31,7 +31,8 @@ class File(Interface):
                     os.makedirs(os.path.dirname(fn))
                 with open(fn, 'ab') as f:
                     f.write(v)
-                    os.fsync(f)
+                    if fsync:
+                        os.fsync(f)
         finally:
             if lock: self.lock.release()
 
