@@ -97,6 +97,7 @@ class Server(object):
                     payload = self.socket.recv_multipart()
 
                 address, command, payload = payload[0], payload[1], payload[2:]
+                log('Server receives', address, command)
                 if command == b'close':
                     log('Server closes')
                     self.ack(address)
@@ -143,10 +144,11 @@ class Server(object):
                     raise ValueError("Unknown command: " + command)
 
     def send_to_client(self, address, result):
-        if not isinstance(result, list):
-            result = [result]
-        with self._socket_lock:
-            self.socket.send_multipart([address] + result)
+        with logerrors():
+            if not isinstance(result, list):
+                result = [result]
+            with self._socket_lock:
+                self.socket.send_multipart([address] + result)
 
     def _write_to_disk(self):
         while self.status != 'closed':
@@ -164,13 +166,14 @@ class Server(object):
                 self._out_disk_buffer.task_done()
 
     def ack(self, address, flow_control=True):
-        if flow_control and self._out_disk_buffer.full():
-            log('Out disk buffer full - Flow control in effect',
-                'Freezing address', address)
-            self._frozen_sockets.put(address)
-        else:
-            log('Server sends ack')
-            self.send_to_client(address, b'ack')
+        with logerrors():
+            if flow_control and self._out_disk_buffer.full():
+                log('Out disk buffer full - Flow control in effect',
+                    'Freezing address', address)
+                self._frozen_sockets.put(address)
+            else:
+                log('Server sends ack')
+                self.send_to_client(address, b'ack')
 
     def _free_frozen_sockets(self):
         while self.status != 'closed':
@@ -217,10 +220,11 @@ class Server(object):
         # TODO: delete file from disk
 
     def drop(self):
-        self.inmem.clear()
-        self.memory_usage = 0
-        self.lengths.clear()
-        self.file.drop()
+        with logerrors():
+            self.inmem.clear()
+            self.memory_usage = 0
+            self.lengths.clear()
+            self.file.drop()
 
     def flush(self, keys=None, block=None):
         """ Flush keys to disk
@@ -254,13 +258,14 @@ class Server(object):
             self._out_disk_buffer.join()
 
     def get(self, keys):
-        log('Server gets keys', keys)
-        self._out_disk_buffer.join()  # block until everything is written
-        with self._lock:
-            from_disk = self.file.get(keys, lock=False)
-            result = [from_disk[i] + b''.join(self.inmem[k])
-                          for i, k in enumerate(keys)]
-        return result
+        with logerrors():
+            log('Server gets keys', keys)
+            self._out_disk_buffer.join()  # block until everything is written
+            with self._lock:
+                from_disk = self.file.get(keys, lock=False)
+                result = [from_disk[i] + b''.join(self.inmem[k])
+                              for i, k in enumerate(keys)]
+            return result
 
     def close(self):
         log('Server closes')
@@ -336,8 +341,10 @@ class Shared(Interface):
         addr = self.file.get('.address', lock=False)
         assert addr
 
-        self.socket = context.socket(zmq.DEALER)
+        self.context = zmq.Context()
+        self.socket = self.context.socket(zmq.DEALER)
         self.socket.connect(addr)
+        print(addr)
         self.send(b'syn', [], ack_required=False)
         self.lock = NotALock()  # Server sequentializes everything
         Interface.__init__(self)
@@ -346,8 +353,8 @@ class Shared(Interface):
         return {'path': self.file.path}
 
     def __setstate__(self, state):
-        Interface.__setstate__(self, state)
         self.__init__(state['path'])
+        log('Reconstruct client from pickled state')
 
     def send(self, command, payload, recv=False, ack_required=True):
         if ack_required:
@@ -390,6 +397,10 @@ class Shared(Interface):
 
     def close_server(self):
         self.send(b'close', [])
+
+    def close(self):
+        self.socket.close(1)
+        self.context.close(1)
 
 
 class NotALock(object):

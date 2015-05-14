@@ -14,6 +14,11 @@ class Encode(Interface):
         self.join = join
         Interface.__init__(self)
 
+    def __getstate__(self):
+        return self.__dict__
+
+    __setstate__ = Interface.__setstate__
+
     def append(self, data, **kwargs):
         data = valmap(self.encode, data)
         data = valmap(frame, data)
