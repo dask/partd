@@ -61,6 +61,7 @@ class Interface(object):
             return
         else:
             self._iset(key, value)
+            self._iset_seen.add(key)
 
     def __enter__(self):
         return self

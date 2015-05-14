@@ -51,13 +51,14 @@ class Numpy(Interface):
         if isinstance(partd, str):
             partd = File(partd)
         self.partd = partd
+        Interface.__init__(self)
 
     def __getstate__(self):
         return {'path': self.path, 'partd': self.partd}
 
     def append(self, data, **kwargs):
         for k, v in data.items():
-            self.partd._iset(extend(k, '.dtype'), str(v.dtype))
+            self.partd.iset(extend(k, '.dtype'), str(v.dtype))
         self.partd.append(valmap(np.ndarray.tobytes, data), **kwargs)
 
     def _get(self, keys, **kwargs):

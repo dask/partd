@@ -31,9 +31,11 @@ def test_key_tuple():
         assert os.path.exists(p.filename(('a', 'b')))
 
 
-def test_ensure():
+def test_iset():
     with File('foo') as p:
         p.iset('x', b'123')
+        assert 'x' in p._iset_seen
+        assert 'y' not in p._iset_seen
         p.iset('x', b'123')
         p.iset('x', b'123')
         assert p.get('x') == b'123'
