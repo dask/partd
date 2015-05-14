@@ -161,13 +161,13 @@ class PartdInterface(object):
         return self._get([key], lock=False)[0]
 
     def get(self, keys, **kwargs):
-        if not isinstance(keys, (tuple, list, set)):
+        if not isinstance(keys, (list, set)):
             return self._get([keys], **kwargs)[0]
         else:
             return self._get(keys, **kwargs)
 
     def delete(self, keys, **kwargs):
-        if not isinstance(keys, (tuple, list, set)):
+        if not isinstance(keys, (list, set)):
             return self._delete([keys], **kwargs)
         else:
             return self._delete(keys, **kwargs)
