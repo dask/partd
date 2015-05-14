@@ -4,12 +4,17 @@ from functools import partial
 
 __all__ = []
 
+
+def bytes_concat(L):
+    return b''.join(L)
+
+
 with ignoring(ImportError):
     import snappy
     Snappy = partial(Encode,
                      snappy.compress,
                      snappy.decompress,
-                     b''.join)
+                     bytes_concat)
     __all__.append('Snappy')
 
 
@@ -18,7 +23,7 @@ with ignoring(ImportError):
     ZLib = partial(Encode,
                    zlib.compress,
                    zlib.decompress,
-                   b''.join)
+                   bytes_concat)
     __all__.append('ZLib')
 
 
@@ -27,7 +32,7 @@ with ignoring(ImportError):
     BZ2 = partial(Encode,
                   bz2.compress,
                   bz2.decompress,
-                  b''.join)
+                  bytes_concat)
     __all__.append('BZ2')
 
 
@@ -36,5 +41,5 @@ with ignoring(ImportError):
     Blosc = partial(Encode,
                     blosc.compress,
                     blosc.decompress,
-                    b''.join)
+                    bytes_concat)
     __all__.append('Blosc')

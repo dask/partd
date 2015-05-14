@@ -3,6 +3,7 @@ from partd.compressed import ZLib
 
 import shutil
 import os
+import pickle
 
 
 def test_partd():
@@ -24,3 +25,10 @@ def test_partd():
             result = p.get(['x'], lock=False)
 
     assert not os.path.exists(p.partd.path)
+
+
+def test_pickle():
+    with ZLib('foo') as p:
+        p.append({'x': b'123'})
+        q = pickle.loads(pickle.dumps(p))
+        assert q.get('x') == b'123'

@@ -54,7 +54,7 @@ class Numpy(Interface):
         Interface.__init__(self)
 
     def __getstate__(self):
-        return {'path': self.path, 'partd': self.partd}
+        return {'partd': self.partd}
 
     def append(self, data, **kwargs):
         for k, v in data.items():
