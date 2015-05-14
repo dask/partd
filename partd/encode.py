@@ -46,5 +46,5 @@ class Encode(Interface):
         return self.partd.lock
 
     def __exit__(self, *args):
+        self.drop()
         self.partd.__exit__(*args)
-        Interface.__exit__(self, *args)

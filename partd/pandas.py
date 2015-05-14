@@ -60,3 +60,7 @@ class Pandas(Interface):
     @property
     def lock(self):
         return self.partd.partd.lock
+
+    def __exit__(self, *args):
+        self.drop()
+        self.partd.__exit__(self, *args)

@@ -93,3 +93,7 @@ class Numpy(Interface):
     @property
     def lock(self):
         return self.partd.lock
+
+    def __exit__(self, *args):
+        self.drop()
+        self.partd.__exit__(self, *args)

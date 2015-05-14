@@ -278,6 +278,7 @@ class Server(object):
 
     def __exit__(self, *args):
         self.close()
+        self.file.__exit__(*args)
 
 
 def keys_to_flush(lengths, fraction=0.1, maxcount=100000):

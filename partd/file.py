@@ -79,9 +79,15 @@ class File(Interface):
     def drop(self):
         if os.path.exists(self.path):
             shutil.rmtree(self.path)
+        self._iset_seen.clear()
+        os.mkdir(self.path)
 
     def filename(self, key):
         return filename(self.path, key)
+
+    def __exit__(self, *args):
+        self.drop()
+        os.rmdir(self.path)
 
 
 def filename(path, key):

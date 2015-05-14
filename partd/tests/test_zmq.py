@@ -10,9 +10,8 @@ import shutil
 
 
 def test_server():
-    if os.path.exists('foo'):
-        core.destroy('foo')
     p = File('foo')
+    p.drop()
     s = Server('foo', available_memory=10)
     try:
         s.start()
