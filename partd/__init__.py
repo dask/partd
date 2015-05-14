@@ -8,4 +8,6 @@ from .utils import ignoring
 with ignoring(ImportError):
     from .numpy import Numpy
 with ignoring(ImportError):
+    from .pandas import Pandas
+with ignoring(ImportError):
     from .zmq import Shared, Server

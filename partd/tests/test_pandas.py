@@ -41,11 +41,9 @@ def test_pandas():
 
 
 
-"""
 def test_column_selection():
     with Pandas('foo') as p:
         p.append({'x': df1, 'y': df2})
         p.append({'x': df2, 'y': df1})
-        result = p.get([('x', 'a')])
-        tm.assert_frame_equal(result[0], pd.concat([df1, df2])['a'])
-"""
+        result = p.get('x', columns=['c', 'b'])
+        tm.assert_frame_equal(result, pd.concat([df1, df2])[['c', 'b']])

@@ -16,7 +16,7 @@ class Pandas(Interface):
     def append(self, data, **kwargs):
         for k, df in data.items():
             self.iset(extend(k, '.columns'), pickle.dumps(list(df.columns)))
-            self.iset(extend(k, '.index-name'), df.index.name.encode())
+            self.iset(extend(k, '.index-name'), pickle.dumps(df.index.name))
 
         # TODO: don't use values, it does some work.  Look at _blocks instead
         #       pframe/cframe do this well
@@ -28,13 +28,16 @@ class Pandas(Interface):
         # TODO: handle categoricals
         self.partd.append(arrays, **kwargs)
 
-    def _get(self, keys, **kwargs):
-        columns = self.partd.partd.get([extend(k, '.columns') for k in keys],
-                                       **kwargs)
-        columns = list(map(pickle.loads, columns))
+    def _get(self, keys, columns=None, **kwargs):
+        if columns is None:
+            columns = self.partd.partd.get([extend(k, '.columns') for k in keys],
+                                           **kwargs)
+            columns = list(map(pickle.loads, columns))
+        else:
+            columns = [columns] * len(keys)
         index_names = self.partd.partd.get([extend(k, '.index-name')
                                             for k in keys], **kwargs)
-        index_names = map(str.decode, index_names)
+        index_names = map(pickle.loads, index_names)
 
         keys = [[extend(k, '.index'), [extend(k, col) for col in cols]]
                  for k, cols in zip(keys, columns)]
