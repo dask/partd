@@ -6,6 +6,7 @@ import locket
 import string
 from toolz import memoize
 from contextlib import contextmanager
+from .utils import nested_get, flatten
 
 
 
@@ -68,13 +69,17 @@ class Interface(object):
         return self._get([key], lock=False)[0]
 
     def get(self, keys, **kwargs):
-        if not isinstance(keys, (list, set)):
-            return self._get([keys], **kwargs)[0]
+        if not isinstance(keys, list):
+            return self.get([keys], **kwargs)[0]
+        elif any(isinstance(key, list) for key in keys):  # nested case
+            flatkeys = list(flatten(keys))
+            result = self.get(flatkeys, **kwargs)
+            return nested_get(keys, dict(zip(flatkeys, result)))
         else:
             return self._get(keys, **kwargs)
 
     def delete(self, keys, **kwargs):
-        if not isinstance(keys, (list, set)):
+        if not isinstance(keys, list):
             return self._delete([keys], **kwargs)
         else:
             return self._delete(keys, **kwargs)

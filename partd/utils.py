@@ -85,3 +85,52 @@ def ignoring(*exc):
 @contextmanager
 def do_nothing(*args, **kwargs):
     yield
+
+
+def nested_get(ind, coll, lazy=False):
+    """ Get nested index from collection
+
+    Examples
+    --------
+
+    >>> nested_get(1, 'abc')
+    'b'
+    >>> nested_get([1, 0], 'abc')
+    ('b', 'a')
+    >>> nested_get([[1, 0], [0, 1]], 'abc')
+    (('b', 'a'), ('a', 'b'))
+    """
+    if isinstance(ind, list):
+        if lazy:
+            return (nested_get(i, coll, lazy=lazy) for i in ind)
+        else:
+            return [nested_get(i, coll, lazy=lazy) for i in ind]
+        return seq
+    else:
+        return coll[ind]
+
+
+def flatten(seq):
+    """
+
+    >>> list(flatten([1]))
+    [1]
+
+    >>> list(flatten([[1, 2], [1, 2]]))
+    [1, 2, 1, 2]
+
+    >>> list(flatten([[[1], [2]], [[1], [2]]]))
+    [1, 2, 1, 2]
+
+    >>> list(flatten(((1, 2), (1, 2)))) # Don't flatten tuples
+    [(1, 2), (1, 2)]
+
+    >>> list(flatten((1, 2, [3, 4]))) # support heterogeneous
+    [1, 2, 3, 4]
+    """
+    for item in seq:
+        if isinstance(item, list):
+            for item2 in flatten(item):
+                yield item2
+        else:
+            yield item

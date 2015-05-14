@@ -39,3 +39,9 @@ def test_iset():
         p.iset('x', b'123')
         p.iset('x', b'123')
         assert p.get('x') == b'123'
+
+
+def test_nested_get():
+    with File('foo') as p:
+        p.append({'x': b'1', 'y': b'2', 'z': b'3'})
+        assert p.get(['x', ['y', 'z']]) == [b'1', [b'2', b'3']]
