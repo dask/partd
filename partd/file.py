@@ -57,7 +57,7 @@ class File(Interface):
         fn = self.filename(key)
         if not os.path.exists(os.path.dirname(fn)):
             os.makedirs(os.path.dirname(fn))
-        with open(self.filename(key), 'w') as f:
+        with open(self.filename(key), 'wb') as f:
             f.write(value)
 
     def _delete(self, keys, lock=True):

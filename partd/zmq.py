@@ -224,7 +224,7 @@ class Server(object):
             if block is None:
                 block = True
         assert isinstance(keys, (tuple, list))
-        payload = dict((key, ''.join(self.inmem[key])) for key in keys)
+        payload = dict((key, b''.join(self.inmem[key])) for key in keys)
         log('append data into out-disk-buffer', 'nkeys', len(keys))
         self._out_disk_buffer.put(payload)
 
@@ -242,7 +242,7 @@ class Server(object):
         self._out_disk_buffer.join()  # block until everything is written
         with self._lock:
             from_disk = self.file.get(keys, lock=False)
-            result = [from_disk[i] + ''.join(self.inmem[k])
+            result = [from_disk[i] + b''.join(self.inmem[k])
                           for i, k in enumerate(keys)]
         return result
 
@@ -267,7 +267,7 @@ def keys_to_flush(lengths, fraction=0.1, maxcount=100000):
     >>> keys_to_flush(lengths, 0.5)
     ['f', 'a']
     """
-    top = topk(max(len(lengths) / 2, 1),
+    top = topk(max(len(lengths) // 2, 1),
                lengths.items(),
                key=1)
     total = sum(lengths.values())
@@ -289,9 +289,11 @@ def serialize_key(key):
     """
     if isinstance(key, tuple):
         return tuple_sep.join(map(serialize_key, key))
-    if isinstance(key, (bytes, str)):
+    if isinstance(key, bytes):
         return key
-    return str(key)
+    if isinstance(key, str):
+        return key.encode()
+    return str(key).encode()
 
 
 def deserialize_key(text):

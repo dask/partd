@@ -35,7 +35,7 @@ def parse_dtype(s):
     >>> parse_dtype("[('a', 'int32')]")
     dtype([('a', '<i4')])
     """
-    if '[' in s:
+    if b'[' in s:
         return np.dtype(eval(s))  # Dangerous!
     else:
         return np.dtype(s)
@@ -58,7 +58,7 @@ class Numpy(Interface):
 
     def append(self, data, **kwargs):
         for k, v in data.items():
-            self.partd.iset(extend(k, '.dtype'), str(v.dtype))
+            self.partd.iset(extend(k, '.dtype'), str(v.dtype).encode())
         self.partd.append(valmap(np.ndarray.tobytes, data), **kwargs)
 
     def _get(self, keys, **kwargs):

@@ -53,11 +53,11 @@ def test_flow_control():
         self._free_frozen_sockets_thread = Thread(target=self._free_frozen_sockets)
         self._free_frozen_sockets_thread.start()
         """
-        p.append({'x': '12345'})
+        p.append({'x': b'12345'})
         sleep(0.1)
         assert s._out_disk_buffer.qsize() == 1
-        p.append({'x': '12345'})
-        p.append({'x': '12345'})
+        p.append({'x': b'12345'})
+        p.append({'x': b'12345'})
         sleep(0.1)
         assert s._out_disk_buffer.qsize() == 3
 
@@ -96,7 +96,7 @@ def partd_server(path, **kwargs):
 def test_partd_object():
     with partd_server('foo', available_memory=100) as (p, server):
         assert os.path.exists(p.file.path)
-        assert 'ipc://server' in p.file.get('.address', lock=False)
+        assert b'ipc://server' in p.file.get('.address', lock=False)
 
         p.append({'x': b'Hello', 'y': b'abc'})
         p.append({'x': b'World!', 'y': b'def'})
