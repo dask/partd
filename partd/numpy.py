@@ -1,28 +1,17 @@
-from __future__ import absolute_import
-
 """ Store arrays
 
 We put arrays on disk as raw bytes, extending along the first dimension.
 Alongside each array x we ensure the value x.dtype which stores the string
 description of the array's dtype.
 """
-
+from __future__ import absolute_import
 import numpy as np
-from functools import partial
-import struct
-from contextlib import contextmanager
-try:
-    from cytoolz import memoize
-except ImportError:
-    from toolz import memoize
-from . import core
 
-destroy = core.destroy
-create = core.create
-partd = core.partd
 
 def extend(key, term):
-    """
+    """ Extend a key with a suffix
+
+    Works if they key is a string or a tuple
 
     >>> extend('x', '.dtype')
     'x.dtype'
@@ -37,15 +26,8 @@ def extend(key, term):
         return extend(str(key), term)
 
 
-@memoize(key=lambda args, kwargs: (args[0], tuple(args[1])))
-def dtypes(path, keys, get=core.get, lock=False, **kwargs):
-    dt_keys = [extend(key, '.dtype') for key in keys]
-    text = get(path, dt_keys, lock=lock, **kwargs)
-    return list(map(parse_dtype, text))
-
-
 def parse_dtype(s):
-    """
+    """ Parse text as numpy dtype
 
     >>> parse_dtype('int32')
     dtype('int32')
@@ -59,27 +41,15 @@ def parse_dtype(s):
         return np.dtype(s)
 
 
-def put(path, data, put=core.put, **kwargs):
-    """ Put dict of numpy arrays into store """
-    bytes = dict((k, v.tobytes()) for k, v in data.items())
-    put(path, bytes, **kwargs)
-    for k, v in data.items():
-        core.ensure(path, extend(k, '.dtype'), str(v.dtype))
-
-
-def get(path, keys, get=core.get, **kwargs):
-    """ Get list of numpy arrays from store """
-    bytes = get(path, keys, **kwargs)
-    dts = dtypes(path, keys, get=get, **kwargs)
-    return list(map(np.frombuffer, bytes, dts))
-
-
 from .core import PartdInterface
+from .file import PartdFile
 from toolz import valmap
 
 
 class PartdNumpy(PartdInterface):
     def __init__(self, partd):
+        if isinstance(partd, str):
+            partd = PartdFile(partd)
         self.partd = partd
 
     def __getstate__(self):
@@ -87,13 +57,14 @@ class PartdNumpy(PartdInterface):
 
     def append(self, data, **kwargs):
         for k, v in data.items():
-            self.partd._iset(k + '.dtype', str(v.dtype))
+            self.partd._iset(extend(k, '.dtype'), str(v.dtype))
         self.partd.append(valmap(np.ndarray.tobytes, data), **kwargs)
 
     def _get(self, keys, **kwargs):
         bytes = self.partd._get(keys, **kwargs)
         dtypes = self.partd._get([extend(key, '.dtype') for key in keys],
                                  lock=False)
+        dtypes = map(parse_dtype, dtypes)
         return list(map(np.frombuffer, bytes, dtypes))
 
     def delete(self, keys, **kwargs):
