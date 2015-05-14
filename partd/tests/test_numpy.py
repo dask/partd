@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import numpy as np
 import os
 import shutil
+import pickle
 
 from partd.numpy import Numpy
 
@@ -30,3 +31,10 @@ def test_nested():
                  ('y', 1): np.array([4, 5, 6]),
                  ('z', 'a', 3): np.array([.1, .2, .3])})
         assert (p.get(('z', 'a', 3)) == np.array([.1, .2, .3])).all()
+
+
+def test_serialization():
+    with Numpy('foo') as p:
+        p.append({'x': np.array([1, 2, 3])})
+        q = pickle.loads(pickle.dumps(p))
+        assert (q.get('x') == [1, 2, 3]).all()

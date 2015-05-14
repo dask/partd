@@ -328,7 +328,7 @@ class Shared(Interface):
         return {'path': self.file.path}
 
     def __setstate__(self, state):
-        Interface.__setstate__(state)
+        Interface.__setstate__(self, state)
         self.__init__(state['path'])
 
     def send(self, command, payload, recv=False, ack_required=True):

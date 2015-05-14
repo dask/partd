@@ -3,6 +3,7 @@ from partd import core
 from threading import Thread
 from time import sleep
 from contextlib import contextmanager
+import pickle
 
 import os
 import shutil
@@ -123,3 +124,10 @@ def test_tuple_keys():
     with partd_server('foo', available_memory=100) as (p, server):
         p.append({('x', 'y'): b'123'})
         assert p.get(('x', 'y')) == b'123'
+
+
+def test_serialization():
+    with partd_server('foo', available_memory=100) as (p, server):
+        p.append({'x': b'123'})
+        q = pickle.loads(pickle.dumps(p))
+        assert q.get('x') == b'123'
