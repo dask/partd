@@ -54,7 +54,7 @@ only large chunks to disk when necessary
 
 *   Server Process::
 
-        >>> server = p.zmq.Server('/path/to/dataset')
+        >>> server = p.Server('/path/to/dataset')
 
 *   Worker processes::
 
