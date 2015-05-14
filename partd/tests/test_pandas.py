@@ -1,0 +1,51 @@
+from partd.pandas import Pandas
+import pandas as pd
+import pandas.util.testing as tm
+import os
+import shutil
+
+
+df1 = pd.DataFrame({'a': [1, 2, 3],
+                    'b': [1., 2., 3.],
+                    'c': ['x', 'y', 'x']}, columns=['a', 'b', 'c'],
+                    index=pd.Index([1, 2, 3], name='myindex'))
+
+df2 = pd.DataFrame({'a': [10, 20, 30],
+                    'b': [10., 20., 30.],
+                    'c': ['X', 'Y', 'X']}, columns=['a', 'b', 'c'],
+                    index=pd.Index([10, 20, 30], name='myindex'))
+
+
+def test_pandas():
+    path = 'tmp.partd'
+    if os.path.exists(path):
+        shutil.rmtree(path)
+    with Pandas(path) as p:
+        assert os.path.exists(path)
+
+        p.append({'x': df1, 'y': df2})
+        p.append({'x': df2, 'y': df1})
+        assert os.path.exists(p.partd.partd.filename('x'))
+        assert os.path.exists(p.partd.partd.filename(('x', 'a')))
+        assert os.path.exists(p.partd.partd.filename(('x', '.index')))
+        assert os.path.exists(p.partd.partd.filename('y'))
+
+        result = p.get(['y', 'x'])
+        tm.assert_frame_equal(result[0], pd.concat([df2, df1]))
+        tm.assert_frame_equal(result[1], pd.concat([df1, df2]))
+
+        with p.lock:  # uh oh, possible deadlock
+            result = p.get(['x'], lock=False)
+
+    assert not os.path.exists(path)
+
+
+
+"""
+def test_column_selection():
+    with Pandas('foo') as p:
+        p.append({'x': df1, 'y': df2})
+        p.append({'x': df2, 'y': df1})
+        result = p.get([('x', 'a')])
+        tm.assert_frame_equal(result[0], pd.concat([df1, df2])['a'])
+"""
