@@ -6,6 +6,8 @@ description of the array's dtype.
 """
 from __future__ import absolute_import
 import numpy as np
+from .compatibility import pickle
+from .utils import frame, framesplit
 
 
 def extend(key, term):
@@ -46,6 +48,20 @@ from .file import File
 from toolz import valmap
 
 
+def serialize(x):
+    if x.dtype == 'O':
+        return frame(pickle.dumps(x.tolist(),protocol=pickle.HIGHEST_PROTOCOL))
+    else:
+        return x.tobytes()
+
+
+def deserialize(bytes, dtype):
+    if dtype == 'O':
+        return sum([pickle.loads(frame) for frame in framesplit(bytes)], [])
+    else:
+        return np.frombuffer(bytes, dtype)
+
+
 class Numpy(Interface):
     def __init__(self, partd):
         if isinstance(partd, str):
@@ -59,14 +75,14 @@ class Numpy(Interface):
     def append(self, data, **kwargs):
         for k, v in data.items():
             self.partd.iset(extend(k, '.dtype'), str(v.dtype).encode())
-        self.partd.append(valmap(np.ndarray.tobytes, data), **kwargs)
+        self.partd.append(valmap(serialize, data), **kwargs)
 
     def _get(self, keys, **kwargs):
         bytes = self.partd._get(keys, **kwargs)
         dtypes = self.partd._get([extend(key, '.dtype') for key in keys],
                                  lock=False)
         dtypes = map(parse_dtype, dtypes)
-        return list(map(np.frombuffer, bytes, dtypes))
+        return list(map(deserialize, bytes, dtypes))
 
     def delete(self, keys, **kwargs):
         keys2 = [extend(key, '.dtype') for key in keys]

@@ -38,3 +38,11 @@ def test_serialization():
         p.append({'x': np.array([1, 2, 3])})
         q = pickle.loads(pickle.dumps(p))
         assert (q.get('x') == [1, 2, 3]).all()
+
+
+def test_object_dtype():
+    x = np.array(['Alice', 'Bob', 'Charlie'], dtype='O')
+    with Numpy('foo') as p:
+        p.append({'x': x})
+        p.append({'x': x})
+        assert (p.get('x') == np.concatenate([x, x])).all()
