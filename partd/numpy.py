@@ -41,15 +41,15 @@ def parse_dtype(s):
         return np.dtype(s)
 
 
-from .core import PartdInterface
-from .file import PartdFile
+from .core import Interface
+from .file import File
 from toolz import valmap
 
 
-class PartdNumpy(PartdInterface):
+class Numpy(Interface):
     def __init__(self, partd):
         if isinstance(partd, str):
-            partd = PartdFile(partd)
+            partd = File(partd)
         self.partd = partd
 
     def __getstate__(self):

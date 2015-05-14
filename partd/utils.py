@@ -72,3 +72,11 @@ def partition_all(n, bytes):
     else:
         for i in range(0, len(bytes), n):
             yield bytes[i: i+n]
+
+
+@contextmanager
+def ignoring(*exc):
+    try:
+        yield
+    except exc:
+        pass

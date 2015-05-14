@@ -1,11 +1,11 @@
-from partd.pickle import PartdPickle
+from partd.pickle import Pickle
 
 
 import os
 import shutil
 
 def test_pickle():
-    with PartdPickle('foo') as p:
+    with Pickle('foo') as p:
         p.append({'x': ['Hello', 'World!'], 'y': [1, 2, 3]})
         p.append({'x': ['Alice', 'Bob!'], 'y': [4, 5, 6]})
         assert os.path.exists(p.partd.filename('x'))
@@ -22,7 +22,7 @@ def test_pickle():
 
 
 def test_ensure():
-    with PartdPickle('foo') as p:
+    with Pickle('foo') as p:
         p.iset('x', [1, 2, 3])
         p.iset('x', [1, 2, 3])
 

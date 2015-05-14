@@ -1,25 +1,25 @@
 from __future__ import absolute_import
 
-from .core import PartdInterface
+from .core import Interface
 import locket
 import os
 import shutil
 import string
 
 
-class PartdFile(PartdInterface):
+class File(Interface):
     def __init__(self, path):
         self.path = path
         if not os.path.exists(path):
             os.makedirs(path)
         self.lock = locket.lock_file(self.filename('.lock'))
-        PartdInterface.__init__(self)
+        Interface.__init__(self)
 
     def __getstate__(self):
         return {'path': self.path}
 
     def __setstate__(self, state):
-        PartdInterface.__setstate__(self, state)
+        Interface.__setstate__(self, state)
         self.lock = locket.lock_file(self.filename('.lock'))
 
     def append(self, data, lock=True, **kwargs):

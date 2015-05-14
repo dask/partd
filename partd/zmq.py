@@ -50,7 +50,7 @@ class Server(object):
     def __init__(self, path, address=None, available_memory=1e9,
                  n_outstanding_writes=10, start=True):
         self.path = path
-        self.file = PartdFile(path)
+        self.file = File(path)
         self.inmem = defaultdict(list)
         self.lengths = defaultdict(lambda: 0)
         self.socket = context.socket(zmq.ROUTER)
@@ -308,26 +308,26 @@ def deserialize_key(text):
         return text
 
 
-from .core import PartdInterface
-from .file import PartdFile
+from .core import Interface
+from .file import File
 
 
-class PartdSharedServer(PartdInterface):
+class Shared(Interface):
     def __init__(self, path, **kwargs):
-        self.file = PartdFile(path)
+        self.file = File(path)
         addr = self.file.get('.address', lock=False)
         assert addr
 
         self.socket = context.socket(zmq.DEALER)
         self.socket.connect(addr)
         self.send(b'syn', [], ack_required=False)
-        PartdInterface.__init__(self)
+        Interface.__init__(self)
 
     def __getstate__(self):
         return {'path': self.file.path}
 
     def __setstate__(self, state):
-        PartdInterface.__setstate__(state)
+        Interface.__setstate__(state)
         self.__init__(state['path'])
 
     def send(self, command, payload, recv=False, ack_required=True):

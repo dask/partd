@@ -1,18 +1,18 @@
-from .core import PartdInterface
-from .file import PartdFile
+from .core import Interface
+from .file import File
 from toolz import valmap
 from .utils import frame, framesplit
 
 
-class PartdEncode(PartdInterface):
+class Encode(Interface):
     def __init__(self, encode, decode, partd, join=''.join):
         if isinstance(partd, str):
-            partd = PartdFile(partd)
+            partd = File(partd)
         self.partd = partd
         self.encode = encode
         self.decode = decode
         self.join = join
-        PartdInterface.__init__(self)
+        Interface.__init__(self)
 
     def append(self, data, **kwargs):
         data = valmap(self.encode, data)
@@ -42,4 +42,4 @@ class PartdEncode(PartdInterface):
 
     def __exit__(self, *args):
         self.partd.__exit__(*args)
-        PartdInterface.__exit__(self, *args)
+        Interface.__exit__(self, *args)

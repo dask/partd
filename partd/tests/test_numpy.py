@@ -4,11 +4,11 @@ import numpy as np
 import os
 import shutil
 
-from partd.numpy import PartdNumpy
+from partd.numpy import Numpy
 
 def test_numpy():
     dt = np.dtype([('a', 'i4'), ('b', 'i2'), ('c', 'f8')])
-    with PartdNumpy('foo') as p:
+    with Numpy('foo') as p:
         p.append({'a': np.array([10, 20, 30], dtype=dt['a']),
                   'b': np.array([ 1,  2,  3], dtype=dt['b']),
                   'c': np.array([.1, .2, .3], dtype=dt['c'])})
@@ -25,7 +25,7 @@ def test_numpy():
 
 
 def test_nested():
-    with PartdNumpy('foo') as p:
+    with Numpy('foo') as p:
         p.append({'x': np.array([1, 2, 3]),
                  ('y', 1): np.array([4, 5, 6]),
                  ('z', 'a', 3): np.array([.1, .2, .3])})

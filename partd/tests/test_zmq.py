@@ -1,4 +1,4 @@
-from partd.zmq import Server, keys_to_flush, log, PartdFile, PartdSharedServer
+from partd.zmq import Server, keys_to_flush, log, File, Shared
 from partd import core
 from threading import Thread
 from time import sleep
@@ -11,7 +11,7 @@ import shutil
 def test_server():
     if os.path.exists('foo'):
         core.destroy('foo')
-    p = PartdFile('foo')
+    p = File('foo')
     s = Server('foo', available_memory=10)
     try:
         s.start()
@@ -42,7 +42,7 @@ def test_flow_control():
     if os.path.exists('bar'):
         shutil.rmtree('bar')
     s = Server('bar', available_memory=1, n_outstanding_writes=3, start=False)
-    p = PartdSharedServer('bar')
+    p = Shared('bar')
     try:
         listen_thread = Thread(target=s.listen)
         listen_thread.start()
@@ -88,7 +88,7 @@ def partd_server(path, **kwargs):
         shutil.rmtree(path)
     os.mkdir(path)
     with Server(path, **kwargs) as server:
-        with PartdSharedServer(path) as p:
+        with Shared(path) as p:
             yield (p, server)
 
 

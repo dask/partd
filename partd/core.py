@@ -48,7 +48,7 @@ def do_nothing(*args, **kwargs):
     yield
 
 
-class PartdInterface(object):
+class Interface(object):
     def __init__(self):
         self._iset_seen = set()
 
