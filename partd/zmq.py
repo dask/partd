@@ -111,6 +111,13 @@ class Server(object):
                     self.append(data)
                     self.ack(address)
 
+                elif command == b'iset':
+                    key, value = payload
+                    key = deserialize_key(key)
+                    if key not in self.inmem:
+                        self.inmem[key] = value
+                    self.ack(address)
+
                 elif command == b'get':
                     keys = list(map(deserialize_key, payload))
                     log('get', keys)
@@ -375,7 +382,7 @@ class Shared(Interface):
         self.send(b'delete', keys)
 
     def _iset(self, key, value):
-        return self.file._iset(key, value)
+        self.send(b'iset', [key, value])
 
     def drop(self):
         self.send(b'drop', [])

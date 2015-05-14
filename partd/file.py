@@ -52,13 +52,19 @@ class File(Interface):
                 self.lock.release()
         return result
 
-    def _iset(self, key, value):
+    def _iset(self, key, value, lock=True):
         """ Idempotent set """
         fn = self.filename(key)
         if not os.path.exists(os.path.dirname(fn)):
             os.makedirs(os.path.dirname(fn))
-        with open(self.filename(key), 'wb') as f:
-            f.write(value)
+        if lock:
+            self.lock.acquire()
+        try:
+            with open(self.filename(key), 'wb') as f:
+                f.write(value)
+        finally:
+            if lock:
+                self.lock.release()
 
     def _delete(self, keys, lock=True):
         if lock:
