@@ -96,9 +96,9 @@ def nested_get(ind, coll, lazy=False):
     >>> nested_get(1, 'abc')
     'b'
     >>> nested_get([1, 0], 'abc')
-    ('b', 'a')
+    ['b', 'a']
     >>> nested_get([[1, 0], [0, 1]], 'abc')
-    (('b', 'a'), ('a', 'b'))
+    [['b', 'a'], ['a', 'b']]
     """
     if isinstance(ind, list):
         if lazy:
@@ -134,3 +134,44 @@ def flatten(seq):
                 yield item2
         else:
             yield item
+
+
+def suffix(key, term):
+    """ suffix a key with a suffix
+
+    Works if they key is a string or a tuple
+
+    >>> suffix('x', '.dtype')
+    'x.dtype'
+    >>> suffix(('a', 'b', 'c'), '.dtype')
+    ('a', 'b', 'c.dtype')
+    """
+    if isinstance(key, str):
+        return key + term
+    elif isinstance(key, tuple):
+        return key[:-1] + (suffix(key[-1], term),)
+    else:
+        return suffix(str(key), term)
+
+
+def extend(key, term):
+    """ extend a key with a another element in a tuple
+
+    Works if they key is a string or a tuple
+
+    >>> extend('x', '.dtype')
+    ('x', '.dtype')
+    >>> extend(('a', 'b', 'c'), '.dtype')
+    ('a', 'b', 'c', '.dtype')
+    """
+    if isinstance(term, tuple):
+        pass
+    elif isinstance(term, str):
+        term = (term,)
+    else:
+        term = (str(term),)
+
+    if not isinstance(key, tuple):
+        key = (key,)
+
+    return key + term
