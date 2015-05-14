@@ -10,22 +10,45 @@ from .compatibility import pickle
 from .utils import frame, framesplit
 
 
-def extend(key, term):
-    """ Extend a key with a suffix
+def suffix(key, term):
+    """ suffix a key with a suffix
 
     Works if they key is a string or a tuple
 
-    >>> extend('x', '.dtype')
+    >>> suffix('x', '.dtype')
     'x.dtype'
-    >>> extend(('a', 'b', 'c'), '.dtype')
+    >>> suffix(('a', 'b', 'c'), '.dtype')
     ('a', 'b', 'c.dtype')
     """
     if isinstance(key, str):
         return key + term
     elif isinstance(key, tuple):
-        return key[:-1] + (extend(key[-1], term),)
+        return key[:-1] + (suffix(key[-1], term),)
     else:
-        return extend(str(key), term)
+        return suffix(str(key), term)
+
+
+def extend(key, term):
+    """ extend a key with a another element in a tuple
+
+    Works if they key is a string or a tuple
+
+    >>> extend('x', '.dtype')
+    ('x', '.dtype')
+    >>> extend(('a', 'b', 'c'), '.dtype')
+    ('a', 'b', 'c', '.dtype')
+    """
+    if isinstance(term, tuple):
+        pass
+    elif isinstance(term, str):
+        term = (term,)
+    else:
+        term = (str(term),)
+
+    if not isinstance(key, tuple):
+        key = (key,)
+
+    return key + term
 
 
 def parse_dtype(s):
@@ -76,18 +99,18 @@ class Numpy(Interface):
 
     def append(self, data, **kwargs):
         for k, v in data.items():
-            self.partd.iset(extend(k, '.dtype'), str(v.dtype).encode())
+            self.partd.iset(suffix(k, '.dtype'), str(v.dtype).encode())
         self.partd.append(valmap(serialize, data), **kwargs)
 
     def _get(self, keys, **kwargs):
         bytes = self.partd._get(keys, **kwargs)
-        dtypes = self.partd._get([extend(key, '.dtype') for key in keys],
+        dtypes = self.partd._get([suffix(key, '.dtype') for key in keys],
                                  lock=False)
         dtypes = map(parse_dtype, dtypes)
         return list(map(deserialize, bytes, dtypes))
 
     def delete(self, keys, **kwargs):
-        keys2 = [extend(key, '.dtype') for key in keys]
+        keys2 = [suffix(key, '.dtype') for key in keys]
         self.partd.delete(keys2, **kwargs)
 
     def _iset(self, key, value):
