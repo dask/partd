@@ -149,7 +149,7 @@ class Server(object):
                     with logduration("Write %d files %d bytes" %
                                      (len(data), nbytes),
                                      nbytes=nbytes):
-                        core.put(self.path, data, lock=False)
+                        self.file.append(data, lock=False)
                 self._out_disk_buffer.task_done()
 
     def ack(self, address, flow_control=True):

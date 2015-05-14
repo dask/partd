@@ -1,10 +1,13 @@
 from .core import PartdInterface
+from .file import PartdFile
 from toolz import valmap
 from .utils import frame, framesplit
 
 
 class PartdEncode(PartdInterface):
     def __init__(self, encode, decode, partd, join=''.join):
+        if isinstance(partd, str):
+            partd = PartdFile(partd)
         self.partd = partd
         self.encode = encode
         self.decode = decode
@@ -36,3 +39,7 @@ class PartdEncode(PartdInterface):
     @property
     def lock(self):
         return self.partd.lock
+
+    def __exit__(self, *args):
+        self.partd.__exit__(*args)
+        PartdInterface.__exit__(self, *args)

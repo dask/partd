@@ -1,30 +1,29 @@
-from partd.pickle import get, put, create, destroy, partd, ensure
-from partd.core import filename, lock
+from partd.pickle import PartdPickle
 
 
 import os
 import shutil
 
 def test_pickle():
-    with partd() as path:
-        put(path, {'x': ['Hello', 'World!'], 'y': [1, 2, 3]})
-        put(path, {'x': ['Alice', 'Bob!'], 'y': [4, 5, 6]})
-        assert os.path.exists(filename(path, 'x'))
-        assert os.path.exists(filename(path, 'y'))
+    with PartdPickle('foo') as p:
+        p.append({'x': ['Hello', 'World!'], 'y': [1, 2, 3]})
+        p.append({'x': ['Alice', 'Bob!'], 'y': [4, 5, 6]})
+        assert os.path.exists(p.partd.filename('x'))
+        assert os.path.exists(p.partd.filename('y'))
 
-        result = get(path, ['y', 'x'])
+        result = p.get(['y', 'x'])
         assert result == [[1, 2, 3, 4, 5, 6],
                           ['Hello', 'World!', 'Alice', 'Bob!']]
 
-        with lock(path):  # uh oh, possible deadlock
-            result = get(path, ['x'], lock=False)
+        with p.lock:  # uh oh, possible deadlock
+            result = p.get(['x'], lock=False)
 
-    assert not os.path.exists(path)
+    assert not os.path.exists(p.partd.path)
 
 
 def test_ensure():
-    with partd() as path:
-        ensure(path, 'x', [1, 2, 3])
-        ensure(path, 'x', [1, 2, 3])
+    with PartdPickle('foo') as p:
+        p.iset('x', [1, 2, 3])
+        p.iset('x', [1, 2, 3])
 
-        assert get(path, ['x']) == [[1, 2, 3]]
+        assert p.get('x') == [1, 2, 3]
