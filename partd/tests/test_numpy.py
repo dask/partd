@@ -45,4 +45,5 @@ def test_object_dtype():
     with Numpy('foo') as p:
         p.append({'x': x})
         p.append({'x': x})
+        assert isinstance(p.get('x'), np.ndarray)
         assert (p.get('x') == np.concatenate([x, x])).all()

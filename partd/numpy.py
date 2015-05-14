@@ -57,7 +57,9 @@ def serialize(x):
 
 def deserialize(bytes, dtype):
     if dtype == 'O':
-        return sum([pickle.loads(frame) for frame in framesplit(bytes)], [])
+        return np.array(
+                sum([pickle.loads(frame) for frame in framesplit(bytes)], []),
+                dtype='O')
     else:
         return np.frombuffer(bytes, dtype)
 
