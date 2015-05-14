@@ -5,7 +5,7 @@ from .utils import frame, framesplit
 
 
 class Encode(Interface):
-    def __init__(self, encode, decode, partd, join=''.join):
+    def __init__(self, encode, decode, join, partd):
         if isinstance(partd, str):
             partd = File(partd)
         self.partd = partd
