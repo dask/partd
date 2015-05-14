@@ -7,7 +7,7 @@ description of the array's dtype.
 from __future__ import absolute_import
 import numpy as np
 from .compatibility import pickle
-from .utils import frame, framesplit, suffix
+from .utils import frame, framesplit, suffix, ignoring
 
 
 def parse_dtype(s):
@@ -28,20 +28,32 @@ def parse_dtype(s):
 from .core import Interface
 from .file import File
 from toolz import valmap
+try:
+    from pandas import msgpack
+except ImportError:
+    try:
+        import msgpack
+    except ImportError:
+        msgpack = False
 
 
 def serialize(x):
     if x.dtype == 'O':
-        return frame(pickle.dumps(x.tolist(),protocol=pickle.HIGHEST_PROTOCOL))
+        with ignoring(Exception):  # Try msgpack (faster on strings)
+            return frame(msgpack.packb(x.tolist()))
+        return frame(pickle.dumps(x.tolist(), protocol=pickle.HIGHEST_PROTOCOL))
     else:
         return x.tobytes()
 
 
 def deserialize(bytes, dtype):
     if dtype == 'O':
-        return np.array(
-                sum([pickle.loads(frame) for frame in framesplit(bytes)], []),
-                dtype='O')
+        try:
+            lists = list(map(msgpack.unpackb, framesplit(bytes)))
+        except:
+            lists = list(map(pickle.loads, framesplit(bytes)))
+
+        return np.array(sum(lists, []), dtype='O')
     else:
         return np.frombuffer(bytes, dtype)
 
