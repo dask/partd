@@ -14,4 +14,4 @@ def concat(lists):
 Pickle = partial(Encode,
                  partial(pickle.dumps, protocol=pickle.HIGHEST_PROTOCOL),
                  pickle.loads,
-                 join=concat)
+                 concat)
