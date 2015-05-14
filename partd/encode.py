@@ -33,10 +33,7 @@ class Encode(Interface):
         return self.partd.delete(keys, **kwargs)
 
     def _iset(self, key, value, **kwargs):
-        with self.partd.lock:
-            if self.partd.get(key, lock=False):
-                self.delete(key, lock=False, **kwargs)
-            self.append({key: value}, lock=False, **kwargs)
+        return self.partd.iset(key, frame(self.encode(value)), **kwargs)
 
     def drop(self):
         pass # return self.partd.drop()
