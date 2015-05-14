@@ -131,3 +131,10 @@ def test_serialization():
         p.append({'x': b'123'})
         q = pickle.loads(pickle.dumps(p))
         assert q.get('x') == b'123'
+
+
+def test_drop():
+    with partd_server('foo', available_memory=100) as (p, server):
+        p.append({'x': b'123'})
+        p.drop()
+        assert p.get('x') == b''

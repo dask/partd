@@ -127,6 +127,10 @@ class Server(object):
                 elif command == b'syn':
                     self.ack(address)
 
+                elif command == b'drop':
+                    self.drop()
+                    self.ack(address)
+
                 else:
                     log("Unknown command", command)
                     raise ValueError("Unknown command: " + command)
@@ -205,6 +209,11 @@ class Server(object):
 
         # TODO: delete file from disk
 
+    def drop(self):
+        self.inmem.clear()
+        self.memory_usage = 0
+        self.lengths.clear()
+        self.file.drop()
 
     def flush(self, keys=None, block=None):
         """ Flush keys to disk
@@ -369,7 +378,8 @@ class Shared(Interface):
         return self.file._iset(key, value)
 
     def drop(self):
-        return self.file.drop()
+        self.send(b'drop', [])
+        sleep(0.05)
 
     def close_server(self):
         self.send(b'close', [])
