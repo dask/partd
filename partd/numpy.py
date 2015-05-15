@@ -9,17 +9,27 @@ import numpy as np
 from .compatibility import pickle
 from .utils import frame, framesplit, suffix, ignoring
 
+def serialize_dtype(dt):
+    """ Serialize dtype to bytes
+
+    >>> serialize_dtype(np.dtype('i4'))
+    '<i4'
+    >>> serialize_dtype(np.dtype('M8[us]'))
+    '<M8[us]'
+    """
+    return dt.str
+
 
 def parse_dtype(s):
     """ Parse text as numpy dtype
 
-    >>> parse_dtype('int32')
+    >>> parse_dtype('i4')
     dtype('int32')
 
-    >>> parse_dtype("[('a', 'int32')]")
+    >>> parse_dtype("[('a', 'i4')]")
     dtype([('a', '<i4')])
     """
-    if b'[' in s:
+    if s.startswith(b'['):
         return np.dtype(eval(s))  # Dangerous!
     else:
         return np.dtype(s)
@@ -70,7 +80,7 @@ class Numpy(Interface):
 
     def append(self, data, **kwargs):
         for k, v in data.items():
-            self.partd.iset(suffix(k, '.dtype'), str(v.dtype).encode())
+            self.partd.iset(suffix(k, '.dtype'), serialize_dtype(v.dtype))
         self.partd.append(valmap(serialize, data), **kwargs)
 
     def _get(self, keys, **kwargs):

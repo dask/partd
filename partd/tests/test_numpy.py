@@ -47,3 +47,12 @@ def test_object_dtype():
         p.append({'x': x})
         assert isinstance(p.get('x'), np.ndarray)
         assert (p.get('x') == np.concatenate([x, x])).all()
+
+
+def test_datetime_types():
+    x = np.array(['2014-01-01T12:00:00'], dtype='M8[us]')
+    y = np.array(['2014-01-01T12:00:00'], dtype='M8[s]')
+    with Numpy('foo') as p:
+        p.append({'x': x, 'y': y})
+        assert p.get('x').dtype == x.dtype
+        assert p.get('y').dtype == y.dtype
