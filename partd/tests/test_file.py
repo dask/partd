@@ -5,10 +5,7 @@ import os
 
 
 def test_partd():
-    if os.path.exists('foo'):
-        shutil.rmtree('foo')
-
-    with File('foo') as p:
+    with File() as p:
         p.append({'x': b'Hello', 'y': b'abc'})
         p.append({'x': b'World!', 'y': b'def'})
         assert os.path.exists(p.filename('x'))
@@ -26,13 +23,13 @@ def test_partd():
 
 
 def test_key_tuple():
-    with File('foo') as p:
+    with File() as p:
         p.append({('a', 'b'): b'123'})
         assert os.path.exists(p.filename(('a', 'b')))
 
 
 def test_iset():
-    with File('foo') as p:
+    with File() as p:
         p.iset('x', b'123')
         assert 'x' in p._iset_seen
         assert 'y' not in p._iset_seen
@@ -42,13 +39,13 @@ def test_iset():
 
 
 def test_nested_get():
-    with File('foo') as p:
+    with File() as p:
         p.append({'x': b'1', 'y': b'2', 'z': b'3'})
         assert p.get(['x', ['y', 'z']]) == [b'1', [b'2', b'3']]
 
 
 def test_drop():
-    with File('foo') as p:
+    with File() as p:
         p.append({'x': b'123'})
         p.iset('y', b'abc')
         assert p.get('x') == b'123'
@@ -62,3 +59,13 @@ def test_drop():
         p.iset('y', b'def')
         assert p.get('x') == b'123'
         assert p.get('y') == b'def'
+
+
+def test_del():
+    f = File()
+
+    assert f.path
+    assert os.path.exists(f.path)
+
+    f.__del__()
+    assert not os.path.exists(f.path)

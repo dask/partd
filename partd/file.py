@@ -2,13 +2,19 @@ from __future__ import absolute_import
 
 from .core import Interface
 import locket
+import tempfile
 import os
 import shutil
 import string
 
 
 class File(Interface):
-    def __init__(self, path):
+    def __init__(self, path=None):
+        if not path:
+            path = tempfile.mkdtemp('.partd')
+            self._explicitly_given_path = False
+        else:
+            self._explicitly_given_path = True
         self.path = path
         if not os.path.exists(path):
             os.makedirs(path)
@@ -87,6 +93,10 @@ class File(Interface):
         return filename(self.path, key)
 
     def __exit__(self, *args):
+        self.drop()
+        os.rmdir(self.path)
+
+    def __del__(self):
         self.drop()
         os.rmdir(self.path)
 
