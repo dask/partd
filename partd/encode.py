@@ -36,7 +36,10 @@ class Encode(Interface):
         return self.partd.iset(key, frame(self.encode(value)), **kwargs)
 
     def drop(self):
-        pass # return self.partd.drop()
+        return self.partd.drop()
+
+    def __del__(self):
+        self.partd.__del__()
 
     @property
     def lock(self):
