@@ -9,7 +9,7 @@ from partd.numpy import Numpy
 
 def test_numpy():
     dt = np.dtype([('a', 'i4'), ('b', 'i2'), ('c', 'f8')])
-    with Numpy('foo') as p:
+    with Numpy() as p:
         p.append({'a': np.array([10, 20, 30], dtype=dt['a']),
                   'b': np.array([ 1,  2,  3], dtype=dt['b']),
                   'c': np.array([.1, .2, .3], dtype=dt['c'])})
@@ -26,7 +26,7 @@ def test_numpy():
 
 
 def test_nested():
-    with Numpy('foo') as p:
+    with Numpy() as p:
         p.append({'x': np.array([1, 2, 3]),
                  ('y', 1): np.array([4, 5, 6]),
                  ('z', 'a', 3): np.array([.1, .2, .3])})
@@ -34,7 +34,7 @@ def test_nested():
 
 
 def test_serialization():
-    with Numpy('foo') as p:
+    with Numpy() as p:
         p.append({'x': np.array([1, 2, 3])})
         q = pickle.loads(pickle.dumps(p))
         assert (q.get('x') == [1, 2, 3]).all()
@@ -42,7 +42,7 @@ def test_serialization():
 
 def test_object_dtype():
     x = np.array(['Alice', 'Bob', 'Charlie'], dtype='O')
-    with Numpy('foo') as p:
+    with Numpy() as p:
         p.append({'x': x})
         p.append({'x': x})
         assert isinstance(p.get('x'), np.ndarray)
@@ -52,7 +52,7 @@ def test_object_dtype():
 def test_datetime_types():
     x = np.array(['2014-01-01T12:00:00'], dtype='M8[us]')
     y = np.array(['2014-01-01T12:00:00'], dtype='M8[s]')
-    with Numpy('foo') as p:
+    with Numpy() as p:
         p.append({'x': x, 'y': y})
         assert p.get('x').dtype == x.dtype
         assert p.get('y').dtype == y.dtype

@@ -17,11 +17,8 @@ df2 = pd.DataFrame({'a': [10, 20, 30],
 
 
 def test_PandasColumns():
-    path = 'tmp.partd'
-    if os.path.exists(path):
-        shutil.rmtree(path)
-    with PandasColumns(path) as p:
-        assert os.path.exists(path)
+    with PandasColumns() as p:
+        assert os.path.exists(p.partd.partd.path)
 
         p.append({'x': df1, 'y': df2})
         p.append({'x': df2, 'y': df1})
@@ -37,7 +34,7 @@ def test_PandasColumns():
         with p.lock:  # uh oh, possible deadlock
             result = p.get(['x'], lock=False)
 
-    assert not os.path.exists(path)
+    assert not os.path.exists(p.partd.partd.path)
 
 
 
@@ -50,11 +47,8 @@ def test_column_selection():
 
 
 def test_PandasBlocks():
-    path = 'tmp.partd'
-    if os.path.exists(path):
-        shutil.rmtree(path)
-    with PandasBlocks(path) as p:
-        assert os.path.exists(path)
+    with PandasBlocks() as p:
+        assert os.path.exists(p.partd.path)
 
         p.append({'x': df1, 'y': df2})
         p.append({'x': df2, 'y': df1})
@@ -68,4 +62,4 @@ def test_PandasBlocks():
         with p.lock:  # uh oh, possible deadlock
             result = p.get(['x'], lock=False)
 
-    assert not os.path.exists(path)
+    assert not os.path.exists(p.partd.path)

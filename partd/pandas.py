@@ -10,7 +10,7 @@ from .utils import extend
 
 
 class PandasColumns(Interface):
-    def __init__(self, partd):
+    def __init__(self, partd=None):
         self.partd = Numpy(partd)
         Interface.__init__(self)
 

@@ -41,8 +41,8 @@ from toolz import valmap
 
 
 class Numpy(Interface):
-    def __init__(self, partd):
-        if isinstance(partd, str):
+    def __init__(self, partd=None):
+        if not partd or isinstance(partd, str):
             partd = File(partd)
         self.partd = partd
         Interface.__init__(self)
@@ -71,6 +71,9 @@ class Numpy(Interface):
 
     def drop(self):
         return self.partd.drop()
+
+    def __del__(self):
+        self.partd.__del__()
 
     @property
     def lock(self):
