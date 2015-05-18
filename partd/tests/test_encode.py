@@ -7,10 +7,7 @@ import os
 
 
 def test_partd():
-    if os.path.exists('foo'):
-        shutil.rmtree('foo')
-
-    with Encode(zlib.compress, zlib.decompress, b''.join, File('foo')) as p:
+    with Encode(zlib.compress, zlib.decompress, b''.join) as p:
         p.append({'x': b'Hello', 'y': b'abc'})
         p.append({'x': b'World!', 'y': b'def'})
 
@@ -24,7 +21,7 @@ def test_partd():
 
 
 def test_ensure():
-    with Encode(zlib.compress, zlib.decompress, b''.join, File('foo')) as p:
+    with Encode(zlib.compress, zlib.decompress, b''.join) as p:
         p.iset('x', b'123')
         p.iset('x', b'123')
         p.iset('x', b'123')

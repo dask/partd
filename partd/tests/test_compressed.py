@@ -7,10 +7,7 @@ import pickle
 
 
 def test_partd():
-    if os.path.exists('foo'):
-        shutil.rmtree('foo')
-
-    with ZLib('foo') as p:
+    with ZLib() as p:
         p.append({'x': b'Hello', 'y': b'abc'})
         p.append({'x': b'World!', 'y': b'def'})
         assert os.path.exists(p.partd.filename('x'))
@@ -28,7 +25,7 @@ def test_partd():
 
 
 def test_pickle():
-    with ZLib('foo') as p:
+    with ZLib() as p:
         p.append({'x': b'123'})
         q = pickle.loads(pickle.dumps(p))
         assert q.get('x') == b'123'

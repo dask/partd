@@ -5,7 +5,7 @@ import os
 import shutil
 
 def test_pickle():
-    with Pickle('foo') as p:
+    with Pickle() as p:
         p.append({'x': ['Hello', 'World!'], 'y': [1, 2, 3]})
         p.append({'x': ['Alice', 'Bob!'], 'y': [4, 5, 6]})
         assert os.path.exists(p.partd.filename('x'))
@@ -22,7 +22,7 @@ def test_pickle():
 
 
 def test_ensure():
-    with Pickle('foo') as p:
+    with Pickle() as p:
         p.iset('x', [1, 2, 3])
         p.iset('x', [1, 2, 3])
 
