@@ -6,6 +6,7 @@ import tempfile
 import os
 import shutil
 import string
+from .utils import ignoring
 
 
 class File(Interface):
@@ -17,7 +18,8 @@ class File(Interface):
             self._explicitly_given_path = True
         self.path = path
         if not os.path.exists(path):
-            os.makedirs(path)
+            with ignoring(OSError):
+                os.makedirs(path)
         self.lock = locket.lock_file(self.filename('.lock'))
         Interface.__init__(self)
 
@@ -26,7 +28,7 @@ class File(Interface):
 
     def __setstate__(self, state):
         Interface.__setstate__(self, state)
-        self.lock = locket.lock_file(self.filename('.lock'))
+        File.__init__(self, state['path'])
 
     def append(self, data, lock=True, fsync=True, **kwargs):
         if lock: self.lock.acquire()
