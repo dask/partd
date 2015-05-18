@@ -69,3 +69,7 @@ def test_del():
 
     f.__del__()
     assert not os.path.exists(f.path)
+
+    with File('Foo') as p:
+        p.__del__()
+        assert os.path.exists(p.path)

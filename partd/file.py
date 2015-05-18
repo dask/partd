@@ -99,8 +99,9 @@ class File(Interface):
         os.rmdir(self.path)
 
     def __del__(self):
-        self.drop()
-        os.rmdir(self.path)
+        if not self._explicitly_given_path:
+            self.drop()
+            os.rmdir(self.path)
 
 
 def filename(path, key):
