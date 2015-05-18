@@ -38,34 +38,6 @@ def parse_dtype(s):
 from .core import Interface
 from .file import File
 from toolz import valmap
-try:
-    from pandas import msgpack
-except ImportError:
-    try:
-        import msgpack
-    except ImportError:
-        msgpack = False
-
-
-def serialize(x):
-    if x.dtype == 'O':
-        with ignoring(Exception):  # Try msgpack (faster on strings)
-            return frame(msgpack.packb(x.tolist()))
-        return frame(pickle.dumps(x.tolist(), protocol=pickle.HIGHEST_PROTOCOL))
-    else:
-        return x.tobytes()
-
-
-def deserialize(bytes, dtype):
-    if dtype == 'O':
-        try:
-            lists = list(map(msgpack.unpackb, framesplit(bytes)))
-        except:
-            lists = list(map(pickle.loads, framesplit(bytes)))
-
-        return np.array(sum(lists, []), dtype='O')
-    else:
-        return np.frombuffer(bytes, dtype)
 
 
 class Numpy(Interface):
@@ -107,3 +79,53 @@ class Numpy(Interface):
     def __exit__(self, *args):
         self.drop()
         self.partd.__exit__(self, *args)
+
+try:
+    from pandas import msgpack
+except ImportError:
+    try:
+        import msgpack
+    except ImportError:
+        msgpack = False
+
+
+def serialize(x):
+    if x.dtype == 'O':
+        with ignoring(Exception):  # Try msgpack (faster on strings)
+            return frame(msgpack.packb(x.tolist()))
+        return frame(pickle.dumps(x.tolist(), protocol=pickle.HIGHEST_PROTOCOL))
+    else:
+        return x.tobytes()
+
+
+def deserialize(bytes, dtype, copy=False):
+    if dtype == 'O':
+        try:
+            lists = list(map(msgpack.unpackb, framesplit(bytes)))
+        except:
+            lists = list(map(pickle.loads, framesplit(bytes)))
+
+        return np.array(sum(lists, []), dtype='O')
+    else:
+        result = np.frombuffer(bytes, dtype)
+        if copy:
+            result = result.copy()
+        return result
+
+
+import snappy, blosc
+blosc.set_nthreads(1)
+
+
+def compress(bytes, dtype):
+    if dtype == 'O':
+        return snappy.compress(bytes)
+    else:
+        return blosc.compress(bytes, dtype.itemsize)
+
+
+def decompress(bytes, dtype):
+    if dtype == 'O':
+        return snappy.decompress(bytes)
+    else:
+        return blosc.decompress(bytes)
