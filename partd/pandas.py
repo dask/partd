@@ -2,13 +2,14 @@ from __future__ import absolute_import
 
 import pandas as pd
 from toolz import valmap
+from functools import partial
 from .compatibility import pickle
 from .numpy import Numpy
 from .core import Interface
 from .utils import extend
 
 
-class Pandas(Interface):
+class PandasColumns(Interface):
     def __init__(self, partd):
         self.partd = Numpy(partd)
         Interface.__init__(self)
@@ -64,3 +65,73 @@ class Pandas(Interface):
     def __exit__(self, *args):
         self.drop()
         self.partd.__exit__(self, *args)
+
+
+
+import pandas as pd
+from pandas.core.internals import create_block_manager_from_blocks, make_block
+from pandas.core.index import _ensure_index
+
+
+def to_blocks(df):
+    blocks = [block.values for block in df._data.blocks]
+    index = df.index.values
+    placement = [ b.mgr_locs.as_array for b in df._data.blocks ]
+    return blocks, index, df.index.name, list(df.columns), placement
+    return {'blocks': blocks,
+            'index': index,
+            'index_name': df.index.name,
+            'columns': df.columns,
+            'placement': [ b.mgr_locs.as_array for b in df._data.blocks ]}
+
+
+def from_blocks(blocks, index, index_name, columns, placement):
+    blocks = [ make_block(b, placement=placement[i]) for i, b in enumerate(blocks) ]
+    axes = [_ensure_index(columns), _ensure_index(index) ]
+    df = pd.DataFrame(create_block_manager_from_blocks(blocks, axes))
+    df.index.name = index_name
+    return df
+
+from . import numpy as pnp
+from .utils import framesplit, frame
+
+def serialize(df):
+    """ Serialize and compress a Pandas DataFrame
+
+    Uses Pandas blocks, snappy, and blosc to deconstruct an array into bytes
+    """
+    blocks, index, index_name, columns, placement = to_blocks(df)
+    b_blocks = [pnp.compress(pnp.serialize(block), block.dtype)
+                for block in blocks]  # this can be slightly faster if we merge both operations
+    b_index = pnp.compress(pnp.serialize(index), index.dtype)
+    frames = [pickle.dumps(index_name),
+              pickle.dumps(columns),
+              pickle.dumps(placement),
+              pickle.dumps(index.dtype),
+              b_index,
+              pickle.dumps([block.dtype for block in blocks]),
+              pickle.dumps([block.shape for block in blocks])] + b_blocks
+
+    return b''.join(map(frame, frames))
+
+
+def deserialize(bytes):
+    """ Deserialize and decompress bytes back to a pandas DataFrame """
+    frames = list(framesplit(bytes))
+    index_name = pickle.loads(frames[0])
+    columns = pickle.loads(frames[1])
+    placement = pickle.loads(frames[2])
+    dt = pickle.loads(frames[3])
+    index = pnp.deserialize(pnp.decompress(frames[4], dt), dt, copy=True)
+    dtypes = pickle.loads(frames[5])
+    shapes = pickle.loads(frames[6])
+    b_blocks = frames[7:]
+    blocks = [pnp.deserialize(pnp.decompress(block, dt), dt, copy=True).reshape(shape)
+                for block, dt, shape in zip(b_blocks, dtypes, shapes)]
+
+    return from_blocks(blocks, index, index_name, columns, placement)
+
+
+from .encode import Encode
+
+PandasBlocks = partial(Encode, serialize, deserialize, pd.concat)
