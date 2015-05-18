@@ -59,8 +59,6 @@ class Server(object):
             address = 'ipc://server-%s' % str(uuid.uuid1())
         self.address = address
         self.socket.bind(self.address)
-        with open(self.file.filename('.address'), 'w') as f:
-            f.write(self.address)
 
         self.available_memory=available_memory
         self.memory_usage = 0
@@ -337,24 +335,20 @@ from .file import File
 
 
 class Shared(Interface):
-    def __init__(self, path, **kwargs):
-        self.file = File(path)
-        addr = self.file.get('.address', lock=False)
-        assert addr
-
+    def __init__(self, address, **kwargs):
+        self.address = address
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.DEALER)
-        self.socket.connect(addr)
-        print(addr)
+        self.socket.connect(address)
         self.send(b'syn', [], ack_required=False)
         self.lock = NotALock()  # Server sequentializes everything
         Interface.__init__(self)
 
     def __getstate__(self):
-        return {'path': self.file.path}
+        return {'address': self.address}
 
     def __setstate__(self, state):
-        self.__init__(state['path'])
+        self.__init__(state['address'])
         log('Reconstruct client from pickled state')
 
     def send(self, command, payload, recv=False, ack_required=True):
@@ -374,18 +368,18 @@ class Shared(Interface):
 
         Lock argument is ignored.  Everything is sequential (I think)
         """
-        log('Client gets', self.file.path, keys)
+        log('Client gets', self.address, keys)
         keys = list(map(serialize_key, keys))
         return self.send(b'get', keys, recv=True)
 
     def append(self, data, lock=None):
-        log('Client appends', self.file.path, str(len(data)) + ' keys')
+        log('Client appends', self.address, str(len(data)) + ' keys')
         data = keymap(serialize_key, data)
         payload = list(chain.from_iterable(data.items()))
         self.send(b'append', payload)
 
     def _delete(self, keys, lock=None):
-        log('Client deletes', self.file.path, str(len(keys)) + ' keys')
+        log('Client deletes', self.address, str(len(keys)) + ' keys')
         keys = map(serialize_key, keys)
         self.send(b'delete', keys)
 

@@ -36,13 +36,12 @@ def test_keys_to_flush():
     assert keys_to_flush(lengths, 0.5) == ['f', 'a']
 
 
-
 def test_flow_control():
     path = 'bar'
     if os.path.exists('bar'):
         shutil.rmtree('bar')
     s = Server('bar', available_memory=1, n_outstanding_writes=3, start=False)
-    p = Shared('bar')
+    p = Shared(s.address)
     try:
         listen_thread = Thread(target=s.listen)
         listen_thread.start()
@@ -80,29 +79,26 @@ def test_flow_control():
         s.close()
 
 
-
-
 @contextmanager
 def partd_server(path, **kwargs):
     if os.path.exists(path):
         shutil.rmtree(path)
     os.mkdir(path)
     with Server(path, **kwargs) as server:
-        with Shared(path) as p:
+        with Shared(server.address) as p:
             yield (p, server)
 
 
 def test_partd_object():
     with partd_server('foo', available_memory=100) as (p, server):
-        assert os.path.exists(p.file.path)
-        assert b'ipc://server' in p.file.get('.address', lock=False)
+        assert os.path.exists(server.path)
 
         p.append({'x': b'Hello', 'y': b'abc'})
         p.append({'x': b'World!', 'y': b'def'})
 
         result = p.get(['y', 'x'])
         assert result == [b'abcdef', b'HelloWorld!']
-    assert not os.path.exists(p.file.path)
+    assert not os.path.exists(server.file.path)
 
 
 def test_delete():
@@ -118,6 +114,7 @@ def test_iset():
         p.iset('x', b'111')
         p.iset('x', b'111')
         assert p.get('x') == b'111'
+
 
 def test_tuple_keys():
     with partd_server('foo', available_memory=100) as (p, server):

@@ -54,11 +54,11 @@ only large chunks to disk when necessary
 
 *   Server Process::
 
-        >>> server = p.Server('/path/to/dataset')
+        >>> server = p.Server('/path/to/dataset', 'ipc://server')
 
 *   Worker processes::
 
-        >>> p = Shared('/path/to/dataset')
+        >>> p = Shared('ipc://server')
         >>> p.append(...)
 
 
