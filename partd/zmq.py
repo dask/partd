@@ -5,17 +5,16 @@ from itertools import chain
 from bisect import bisect
 from operator import add
 from time import sleep, time
-from toolz import accumulate, topk, pluck
+from toolz import accumulate, topk, pluck, merge, keymap
 import uuid
 from collections import defaultdict
 from contextlib import contextmanager
 from threading import Thread, Lock
-from toolz import keymap
 from datetime import datetime
+from multiprocessing import Process
 from . import core
 from .compatibility import Queue, Empty
 
-context = zmq.Context()
 
 tuple_sep = '-|-'
 
@@ -47,13 +46,13 @@ def logerrors():
 
 
 class Server(object):
-    def __init__(self, path, address=None, available_memory=1e9,
-                 n_outstanding_writes=10, start=True):
-        self.path = path
+    def __init__(self, path=None, address=None, available_memory=1e9,
+                 n_outstanding_writes=10, start=True, block=False):
+        self.context = zmq.Context()
         self.file = File(path)
         self.inmem = defaultdict(list)
         self.lengths = defaultdict(lambda: 0)
-        self.socket = context.socket(zmq.ROUTER)
+        self.socket = self.context.socket(zmq.ROUTER)
 
         if address is None:
             address = 'ipc://server-%s' % str(uuid.uuid1())
@@ -73,16 +72,28 @@ class Server(object):
         if start:
             self.start()
 
+        if block:
+            self.block()
+
     def start(self):
         if self.status != 'run':
             self.status = 'run'
-            log('Start server at', self.address)
             self._listen_thread = Thread(target=self.listen)
             self._listen_thread.start()
             self._write_to_disk_thread = Thread(target=self._write_to_disk)
             self._write_to_disk_thread.start()
             self._free_frozen_sockets_thread = Thread(target=self._free_frozen_sockets)
             self._free_frozen_sockets_thread.start()
+            log('Start server at', self.address)
+
+    def block(self):
+        """ Block until all threads close """
+        try:
+            self._listen_thread.join()
+            self._free_frozen_sockets_thread.join()
+            self._write_to_disk_thread.join()
+        except AttributeError:
+            pass
 
     def listen(self):
         with logerrors():
@@ -268,6 +279,9 @@ class Server(object):
     def close(self):
         log('Server closes')
         self.status = 'closed'
+        self.block()
+        self.socket.close(1)
+        self.context.destroy(3)
         self.file.lock.release()
 
     def __enter__(self):
@@ -335,10 +349,21 @@ from .file import File
 
 
 class Shared(Interface):
-    def __init__(self, address, **kwargs):
+    def __init__(self, address=None, create_server=False, **kwargs):
+        if create_server or address is None:
+            if address is None:
+                address = 'ipc://server-%s' % str(uuid.uuid1())
+            self.server_process = Process(target=Server,
+                                          args=(),
+                                          kwargs=merge(kwargs,
+                                          {'block': True, 'address': address,
+                                           'start': True}))
+            self.server_process.start()
+
         self.address = address
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.DEALER)
+        log('Client connects to %s' % address)
         self.socket.connect(address)
         self.send(b'syn', [], ack_required=False)
         self.lock = NotALock()  # Server sequentializes everything
@@ -394,8 +419,15 @@ class Shared(Interface):
         self.send(b'close', [])
 
     def close(self):
+        if hasattr(self, 'server_process'):
+            self.close_server()
+            self.server_process.join()
         self.socket.close(1)
-        self.context.close(1)
+        self.context.destroy(1)
+
+    def __exit__(self, type, value, traceback):
+        self.drop()
+        self.close()
 
 
 class NotALock(object):

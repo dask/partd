@@ -91,7 +91,7 @@ def partd_server(path, **kwargs):
 
 def test_partd_object():
     with partd_server('foo', available_memory=100) as (p, server):
-        assert os.path.exists(server.path)
+        assert os.path.exists(server.file.path)
 
         p.append({'x': b'Hello', 'y': b'abc'})
         p.append({'x': b'World!', 'y': b'def'})
@@ -134,3 +134,9 @@ def test_drop():
         p.append({'x': b'123'})
         p.drop()
         assert p.get('x') == b''
+
+
+def test_server_autocreation():
+    with Shared() as p:
+        p.append({'x': b'123'})
+        assert p.get('x') == b'123'
