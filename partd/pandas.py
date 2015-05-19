@@ -66,6 +66,9 @@ class PandasColumns(Interface):
         self.drop()
         self.partd.__exit__(self, *args)
 
+    def __del__(self):
+        self.partd.__del__()
+
 
 
 import pandas as pd
