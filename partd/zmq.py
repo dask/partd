@@ -429,6 +429,9 @@ class Shared(Interface):
         self.drop()
         self.close()
 
+    def __del__(self):
+        self.close()
+
 
 class NotALock(object):
     def acquire(self): pass
