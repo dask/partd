@@ -12,6 +12,7 @@ setup(name='partd',
       license='BSD',
       keywords='',
       packages=['partd'],
+      install_requires=list(open('requirements.txt').read().strip().split('\n')),
       long_description=(open('README.rst').read() if exists('README.rst')
                         else ''),
       zip_safe=False)
