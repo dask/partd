@@ -14,6 +14,7 @@ from datetime import datetime
 from multiprocessing import Process
 from . import core
 from .compatibility import Queue, Empty
+from .utils import ignoring
 
 
 tuple_sep = '-|-'
@@ -280,8 +281,10 @@ class Server(object):
         log('Server closes')
         self.status = 'closed'
         self.block()
-        self.socket.close(1)
-        self.context.destroy(3)
+        with ignoring(zmq.error.ZMQError):
+            self.socket.close(1)
+        with ignoring(zmq.error.ZMQError):
+            self.context.destroy(3)
         self.file.lock.release()
 
     def __enter__(self):
@@ -420,10 +423,13 @@ class Shared(Interface):
 
     def close(self):
         if hasattr(self, 'server_process'):
-            self.close_server()
+            with ignoring(zmq.error.ZMQError):
+                self.close_server()
             self.server_process.join()
-        self.socket.close(1)
-        self.context.destroy(1)
+        with ignoring(zmq.error.ZMQError):
+            self.socket.close(1)
+        with ignoring(zmq.error.ZMQError):
+            self.context.destroy(1)
 
     def __exit__(self, type, value, traceback):
         self.drop()
