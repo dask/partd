@@ -8,7 +8,6 @@ from .compressed import *
 from .utils import ignoring
 with ignoring(ImportError):
     from .numpy import Numpy
-with ignoring(ImportError):
-    from .pandas import PandasColumns, PandasBlocks
+from .pandas import PandasColumns, PandasBlocks
 with ignoring(ImportError):
     from .zmq import Shared, Server
