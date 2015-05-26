@@ -6,6 +6,7 @@ description of the array's dtype.
 """
 from __future__ import absolute_import
 import numpy as np
+from functools import partial
 from .compatibility import pickle
 from .utils import frame, framesplit, suffix, ignoring
 
@@ -116,19 +117,25 @@ def deserialize(bytes, dtype, copy=False):
         return result
 
 
-import snappy, blosc
+import blosc
 blosc.set_nthreads(1)
+try:
+    from snappy import compress as compress_text
+    from snappy import decompress as decompress_text
+except ImportError:
+    compress_text = partial(blosc.compress, typesize=1)
+    decompress_text = blosc.decompress
 
 
 def compress(bytes, dtype):
     if dtype == 'O':
-        return snappy.compress(bytes)
+        return compress_text(bytes)
     else:
         return blosc.compress(bytes, dtype.itemsize)
 
 
 def decompress(bytes, dtype):
     if dtype == 'O':
-        return snappy.decompress(bytes)
+        return decompress_text(bytes)
     else:
         return blosc.decompress(bytes)
