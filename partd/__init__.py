@@ -12,4 +12,4 @@ with ignoring(ImportError):
     from .numpy import Numpy
 from .pandas import PandasColumns, PandasBlocks
 with ignoring(ImportError):
-    from .zmq import Shared, Server
+    from .zmq import Client, Server

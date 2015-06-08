@@ -13,6 +13,8 @@ from threading import Thread, Lock
 from datetime import datetime
 from multiprocessing import Process
 from .dict import Dict
+from .file import File
+from .buffer import Buffer
 from . import core
 from .compatibility import Queue, Empty
 from .utils import ignoring
@@ -51,7 +53,7 @@ class Server(object):
     def __init__(self, partd=None, address=None, start=True, block=False):
         self.context = zmq.Context()
         if partd is None:
-            partd = Dict()
+            partd = Buffer(Dict(), File())
         self.partd = partd
 
         self.socket = self.context.socket(zmq.ROUTER)

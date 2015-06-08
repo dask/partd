@@ -80,7 +80,9 @@ class File(Interface):
             self.lock.acquire()
         try:
             for key in keys:
-                os.remove(filename(self.path, key))
+                path = filename(self.path, key)
+                if os.path.exists(path):
+                    os.remove(path)
         finally:
             if lock:
                 self.lock.release()
