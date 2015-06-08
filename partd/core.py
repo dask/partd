@@ -52,11 +52,11 @@ class Interface(object):
         self.__dict__.update(state)
         self._iset_seen = set()
 
-    def iset(self, key, value):
+    def iset(self, key, value, **kwargs):
         if key in self._iset_seen:
             return
         else:
-            self._iset(key, value)
+            self._iset(key, value, **kwargs)
             self._iset_seen.add(key)
 
     def __enter__(self):

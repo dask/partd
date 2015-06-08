@@ -1,5 +1,5 @@
 from partd.dict import Dict
-from partd.buffer import Buffer
+from partd.buffer import Buffer, keys_to_flush
 
 import shutil
 import os
@@ -23,3 +23,8 @@ def test_partd():
 
         with p.lock:  # uh oh, possible deadlock
             result = p.get(['x'], lock=False)
+
+
+def test_keys_to_flush():
+    lengths = {'a': 20, 'b': 10, 'c': 15, 'd': 15, 'e': 10, 'f': 25, 'g': 5}
+    assert keys_to_flush(lengths, 0.5) == ['f', 'a']

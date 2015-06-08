@@ -59,6 +59,7 @@ class Dict(Interface):
 
     def drop(self):
         self._iset_seen.clear()
+        self.data.clear()
 
     def __exit__(self, *args):
         self.drop()

@@ -12,6 +12,7 @@ from contextlib import contextmanager
 from threading import Thread, Lock
 from datetime import datetime
 from multiprocessing import Process
+from .dict import Dict
 from . import core
 from .compatibility import Queue, Empty
 from .utils import ignoring
@@ -47,12 +48,12 @@ def logerrors():
 
 
 class Server(object):
-    def __init__(self, path=None, address=None, available_memory=1e9,
-                 n_outstanding_writes=10, start=True, block=False):
+    def __init__(self, partd=None, address=None, start=True, block=False):
         self.context = zmq.Context()
-        self.file = File(path)
-        self.inmem = defaultdict(list)
-        self.lengths = defaultdict(lambda: 0)
+        if partd is None:
+            partd = Dict()
+        self.partd = partd
+
         self.socket = self.context.socket(zmq.ROUTER)
 
         if address is None:
@@ -60,13 +61,9 @@ class Server(object):
         self.address = address
         self.socket.bind(self.address)
 
-        self.available_memory=available_memory
-        self.memory_usage = 0
         self.status = 'created'
-        self._out_disk_buffer = Queue(maxsize=n_outstanding_writes)
-        self._frozen_sockets = Queue()
 
-        self.file.lock.acquire()
+        self.partd.lock.acquire()
         self._lock = Lock()
         self._socket_lock = Lock()
 
@@ -81,18 +78,12 @@ class Server(object):
             self.status = 'run'
             self._listen_thread = Thread(target=self.listen)
             self._listen_thread.start()
-            self._write_to_disk_thread = Thread(target=self._write_to_disk)
-            self._write_to_disk_thread.start()
-            self._free_frozen_sockets_thread = Thread(target=self._free_frozen_sockets)
-            self._free_frozen_sockets_thread.start()
             log('Start server at', self.address)
 
     def block(self):
         """ Block until all threads close """
         try:
             self._listen_thread.join()
-            self._free_frozen_sockets_thread.join()
-            self._write_to_disk_thread.join()
         except AttributeError:
             pass
 
@@ -119,14 +110,14 @@ class Server(object):
                     keys, values = payload[::2], payload[1::2]
                     keys = list(map(deserialize_key, keys))
                     data = dict(zip(keys, values))
-                    self.append(data)
+                    self.partd.append(data, lock=False)
+                    log('Server appends %d keys' % len(data))
                     self.ack(address)
 
                 elif command == b'iset':
                     key, value = payload
                     key = deserialize_key(key)
-                    if key not in self.inmem:
-                        self.inmem[key] = value
+                    self.partd.iset(key, value, lock=False)
                     self.ack(address)
 
                 elif command == b'get':
@@ -139,7 +130,7 @@ class Server(object):
                 elif command == b'delete':
                     keys = list(map(deserialize_key, payload))
                     log('delete', keys)
-                    self.delete(keys)
+                    self.partd.delete(keys, lock=False)
                     self.ack(address, flow_control=False)
 
                 elif command == b'syn':
@@ -160,121 +151,24 @@ class Server(object):
             with self._socket_lock:
                 self.socket.send_multipart([address] + result)
 
-    def _write_to_disk(self):
-        while self.status != 'closed':
-            try:
-                data = self._out_disk_buffer.get(timeout=1)
-            except Empty:
-                continue
-            else:
-                with self._lock:
-                    nbytes = sum(map(len, data.values()))
-                    with logduration("Write %d files %d bytes" %
-                                     (len(data), nbytes),
-                                     nbytes=nbytes):
-                        self.file.append(data, lock=False)
-                self._out_disk_buffer.task_done()
-
     def ack(self, address, flow_control=True):
         with logerrors():
-            if flow_control and self._out_disk_buffer.full():
-                log('Out disk buffer full - Flow control in effect',
-                    'Freezing address', address)
-                self._frozen_sockets.put(address)
-            else:
-                log('Server sends ack')
-                self.send_to_client(address, b'ack')
-
-    def _free_frozen_sockets(self):
-        while self.status != 'closed':
-            try:
-                data = self._frozen_sockets.get(timeout=1)
-                self._frozen_sockets.put(data)  # put back in for the moment
-            except Empty:
-                continue
-            else:
-                log('Freeing frozen sockets, waiting on disk buffer to clear')
-                self._out_disk_buffer.join()
-                log('Disk buffer cleared, sending acks to %d sockets' %
-                        self._frozen_sockets.qsize())
-                while not self._frozen_sockets.empty():
-                    addr = self._frozen_sockets.get()
-                    log('Free', addr)
-                    self.ack(addr)
+            log('Server sends ack')
+            self.send_to_client(address, b'ack')
 
     def append(self, data):
-        total_mem = 0
-        for k, v in data.items():
-            self.inmem[k].append(v)
-            self.lengths[k] += len(v)
-            total_mem += len(v)
-        self.memory_usage += total_mem
-
-        log('Server appends %d keys' % len(data), 'of %d bytes' % total_mem)
-
-        while self.memory_usage > self.available_memory:
-            keys = keys_to_flush(self.lengths, 0.1, maxcount=20)
-            self.flush(keys)
-
-    def delete(self, keys):
-        released = 0
-        for k in keys:
-            released += sum(map(len, self.inmem[k]))
-            del self.inmem[k]
-
-        self.memory_usage -= released
-
-        log('Server deleted %d keys' % len(keys),
-            '. Released %d bytes' % released)
-
-        # TODO: delete file from disk
+        self.partd.append(data, lock=False)
+        log('Server appends %d keys' % len(data))
 
     def drop(self):
         with logerrors():
-            self.inmem.clear()
-            self.memory_usage = 0
-            self.lengths.clear()
-            self.file.drop()
-
-    def flush(self, keys=None, block=None):
-        """ Flush keys to disk
-
-        Parameters
-        ----------
-
-        keys: list or None
-            list of keys to flush
-        block: bool (defaults to None)
-            Whether or not to block until all writing is complete
-
-        If no keys are given then flush all keys
-        """
-        if keys is None:
-            keys = list(self.lengths)
-            if block is None:
-                block = True
-        assert isinstance(keys, (tuple, list))
-        payload = dict((key, b''.join(self.inmem[key])) for key in keys)
-        log('append data into out-disk-buffer', 'nkeys', len(keys))
-        self._out_disk_buffer.put(payload)
-
-        for key in keys:
-            self.memory_usage -= self.lengths[key]
-            del self.inmem[key]
-            del self.lengths[key]
-
-        if block:
-            log('Blocking on out disk buffer from flush')
-            self._out_disk_buffer.join()
+            self.partd.drop()
 
     def get(self, keys):
         with logerrors():
             log('Server gets keys', keys)
-            self._out_disk_buffer.join()  # block until everything is written
             with self._lock:
-                from_disk = self.file.get(keys, lock=False)
-                result = [from_disk[i] + b''.join(self.inmem[k])
-                              for i, k in enumerate(keys)]
+                result = self.partd.get(keys, lock=False)
             return result
 
     def close(self):
@@ -285,7 +179,7 @@ class Server(object):
             self.socket.close(1)
         with ignoring(zmq.error.ZMQError):
             self.context.destroy(3)
-        self.file.lock.release()
+        self.partd.lock.release()
 
     def __enter__(self):
         self.start()
@@ -293,7 +187,7 @@ class Server(object):
 
     def __exit__(self, *args):
         self.close()
-        self.file.__exit__(*args)
+        self.partd.__exit__(*args)
 
 
 def keys_to_flush(lengths, fraction=0.1, maxcount=100000):

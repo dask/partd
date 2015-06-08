@@ -1,5 +1,5 @@
 from partd.zmq import Server, keys_to_flush, log, File, Shared
-from partd import core
+from partd import core, Dict
 from threading import Thread
 from time import sleep
 from contextlib import contextmanager
@@ -10,33 +10,21 @@ import shutil
 
 
 def test_server():
-    p = File('foo')
-    p.drop()
-    s = Server('foo', available_memory=10)
+    s = Server()
     try:
         s.start()
         s.append({'x': b'abc', 'y': b'1234'})
-        assert s.memory_usage == 7
         s.append({'x': b'def', 'y': b'5678'})
-        assert s.memory_usage < s.available_memory
 
         assert s.get(['x']) == [b'abcdef']
         assert s.get(['x', 'y']) == [b'abcdef', b'12345678']
 
-        s.flush(block=True)
-
-        assert s.memory_usage == 0
-        assert p.get(['x'], lock=False) == [b'abcdef']
+        assert s.get(['x']) == [b'abcdef']
     finally:
         s.close()
 
 
-def test_keys_to_flush():
-    lengths = {'a': 20, 'b': 10, 'c': 15, 'd': 15, 'e': 10, 'f': 25, 'g': 5}
-    assert keys_to_flush(lengths, 0.5) == ['f', 'a']
-
-
-def test_flow_control():
+def dont_test_flow_control():
     path = 'bar'
     if os.path.exists('bar'):
         shutil.rmtree('bar')
@@ -80,29 +68,23 @@ def test_flow_control():
 
 
 @contextmanager
-def partd_server(path, **kwargs):
-    if os.path.exists(path):
-        shutil.rmtree(path)
-    os.mkdir(path)
-    with Server(path, **kwargs) as server:
+def partd_server(**kwargs):
+    with Server(**kwargs) as server:
         with Shared(server.address) as p:
             yield (p, server)
 
 
 def test_partd_object():
-    with partd_server('foo', available_memory=100) as (p, server):
-        assert os.path.exists(server.file.path)
-
+    with partd_server() as (p, server):
         p.append({'x': b'Hello', 'y': b'abc'})
         p.append({'x': b'World!', 'y': b'def'})
 
         result = p.get(['y', 'x'])
         assert result == [b'abcdef', b'HelloWorld!']
-    assert not os.path.exists(server.file.path)
 
 
 def test_delete():
-    with partd_server('foo', available_memory=100) as (p, server):
+    with partd_server() as (p, server):
         p.append({'x': b'Hello'})
         assert p.get('x') == b'Hello'
         p.delete(['x'])
@@ -110,27 +92,27 @@ def test_delete():
 
 
 def test_iset():
-    with partd_server('foo', available_memory=100) as (p, server):
+    with partd_server() as (p, server):
         p.iset('x', b'111')
         p.iset('x', b'111')
         assert p.get('x') == b'111'
 
 
 def test_tuple_keys():
-    with partd_server('foo', available_memory=100) as (p, server):
+    with partd_server() as (p, server):
         p.append({('x', 'y'): b'123'})
         assert p.get(('x', 'y')) == b'123'
 
 
 def test_serialization():
-    with partd_server('foo', available_memory=100) as (p, server):
+    with partd_server() as (p, server):
         p.append({'x': b'123'})
         q = pickle.loads(pickle.dumps(p))
         assert q.get('x') == b'123'
 
 
 def test_drop():
-    with partd_server('foo', available_memory=100) as (p, server):
+    with partd_server() as (p, server):
         p.append({'x': b'123'})
         p.drop()
         assert p.get('x') == b''
