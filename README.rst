@@ -47,18 +47,23 @@ Implementations
 The reference implementation uses file-based locks.  This works surprisingly
 well as long as you don't do many small writes.
 
-If you do many small writes then you probably want to cache in memory; this is
-hard to do in parallel while also maintaining consistency.  For this we have a
-centralized server (see ``partd.Shared``) that caches data in memory and writes
-only large chunks to disk when necessary
+If you do many small writes then you probably want to cache in memory.
+Fortunately you can buffer one partd with another, writing only large chunks as
+necessary when spaces runs low::
+
+    >>> p = Buffer(Dict(), File(), available_memory=2e9)  # 2GB memory buffer
+
+You might also want to have many distributed process write to a single partd
+consistently.  This can be done with a server
 
 *   Server Process::
 
-        >>> server = p.Server('/path/to/dataset', 'ipc://server')
+        >>> local_partd = File()
+        >>> p = Server(local_partd, address='ipc://server')
 
 *   Worker processes::
 
-        >>> p = Shared('ipc://server')
+        >>> p = Client('ipc://server')
         >>> p.append(...)
 
 
@@ -70,16 +75,19 @@ various things as bytes either with serialization systems like Pickle or
 MSGPack or with compression routines like zlib, snappy, or blosc.  In principle
 we want to compose all of these choice together
 
-1.  Write policy:  ``partd.File``, ``partd.Shared``
-2.  Encoding:  ``partd.Pickle``, ``partd.Numpy``
-3.  Compression:  ``partd.Blosc``, ``partd.Snappy``, ...
+1.  Write policy:  ``Dict``, ``File``, ``Buffer``, ``Client``
+2.  Encoding:  ``Pickle``, ``Numpy``, ``Pandas``, ...
+3.  Compression:  ``Blosc``, ``Snappy``, ...
 
-Partd objects compose by nesting for example here we make a shared
-server that writes snappy compressed numpy arrays::
+Partd objects compose by nesting for example here we make a server backed by a
+buffered dict/file combination with a client using snappy compressed pickle
+data::
 
-    >>> p = partd.Numpy(partd.Snappy(partd.Shared('foo')))
+    >>> server = Server(Buffer(Dict(), File(), available_memory=2e0))
+
+    >>> client = Pickle(Snappy(Client(server.address)))
 
 And here a partd that writes pickle encoded BZ2 compressed bytes directly to
 disk::
 
-    >>> p = partd.Pickle(partd.BZ2(partd.File('foo')))
+    >>> p = Pickle(BZ2(File('foo')))
