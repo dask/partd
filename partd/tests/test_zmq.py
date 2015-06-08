@@ -1,4 +1,4 @@
-from partd.zmq import Server, keys_to_flush, log, File, Shared
+from partd.zmq import Server, keys_to_flush, log, File, Client
 from partd import core, Dict
 from threading import Thread
 from time import sleep
@@ -29,7 +29,7 @@ def dont_test_flow_control():
     if os.path.exists('bar'):
         shutil.rmtree('bar')
     s = Server('bar', available_memory=1, n_outstanding_writes=3, start=False)
-    p = Shared(s.address)
+    p = Client(s.address)
     try:
         listen_thread = Thread(target=s.listen)
         listen_thread.start()
@@ -70,7 +70,7 @@ def dont_test_flow_control():
 @contextmanager
 def partd_server(**kwargs):
     with Server(**kwargs) as server:
-        with Shared(server.address) as p:
+        with Client(server.address) as p:
             yield (p, server)
 
 
@@ -119,6 +119,6 @@ def test_drop():
 
 
 def test_server_autocreation():
-    with Shared() as p:
+    with Client() as p:
         p.append({'x': b'123'})
         assert p.get('x') == b'123'

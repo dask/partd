@@ -245,7 +245,7 @@ from .core import Interface
 from .file import File
 
 
-class Shared(Interface):
+class Client(Interface):
     def __init__(self, address=None, create_server=False, **kwargs):
         if create_server or address is None:
             if address is None:
