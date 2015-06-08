@@ -16,7 +16,7 @@ class Dict(Interface):
         Dict.__init__(self)
         self.data = state['data']
 
-    def append(self, data, lock=True, fsync=True, **kwargs):
+    def append(self, data, lock=True, **kwargs):
         if lock: self.lock.acquire()
         try:
             for k, v in data.items():
