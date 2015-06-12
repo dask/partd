@@ -18,7 +18,7 @@ def serialize_dtype(dt):
     >>> serialize_dtype(np.dtype('M8[us]'))
     '<M8[us]'
     """
-    return dt.str
+    return dt.str.encode()
 
 
 def parse_dtype(s):
@@ -38,7 +38,7 @@ def parse_dtype(s):
 
 from .core import Interface
 from .file import File
-from toolz import valmap
+from toolz import valmap, concat
 
 
 class Numpy(Interface):
@@ -105,11 +105,13 @@ def serialize(x):
 def deserialize(bytes, dtype, copy=False):
     if dtype == 'O':
         try:
-            lists = list(map(msgpack.unpackb, framesplit(bytes)))
+            l = list(concat(map(msgpack.unpackb, framesplit(bytes))))
         except:
-            lists = list(map(pickle.loads, framesplit(bytes)))
+            l = list(concat(map(pickle.loads, framesplit(bytes))))
 
-        return np.array(sum(lists, []), dtype='O')
+        l = [o.decode() for o in l]
+
+        return np.array(l, dtype='O')
     else:
         result = np.frombuffer(bytes, dtype)
         if copy:
