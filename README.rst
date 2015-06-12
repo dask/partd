@@ -1,6 +1,8 @@
 PartD
 =====
 
+|Build Status|
+
 Minimal key-value byte storage with appendable values
 
 Partd stores key-value pairs.
@@ -91,3 +93,6 @@ And here a partd that writes pickle encoded BZ2 compressed bytes directly to
 disk::
 
     >>> p = Pickle(BZ2(File('foo')))
+
+.. |Build Status| image:: https://travis-ci.org/mrocklin/partd.png
+   :target: https://travis-ci.org/mrocklin/partd
