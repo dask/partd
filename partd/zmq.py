@@ -12,15 +12,17 @@ from contextlib import contextmanager
 from threading import Thread, Lock
 from datetime import datetime
 from multiprocessing import Process
+import traceback
+import sys
 from .dict import Dict
 from .file import File
 from .buffer import Buffer
 from . import core
-from .compatibility import Queue, Empty
+from .compatibility import Queue, Empty, unicode
 from .utils import ignoring
 
 
-tuple_sep = '-|-'
+tuple_sep = b'-|-'
 
 def log(*args):
     with open('log', 'a') as f:
@@ -46,6 +48,10 @@ def logerrors():
         yield
     except Exception as e:
         log('Error!', str(e))
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        tb = ''.join(traceback.format_tb(exc_traceback))
+        log('Error!', str(e))
+        log('Traceback', str(tb))
         raise
 
 
@@ -60,6 +66,8 @@ class Server(object):
 
         if address is None:
             address = 'ipc://server-%s' % str(uuid.uuid1())
+        if isinstance(address, unicode):
+            address = address.encode()
         self.address = address
         self.socket.bind(self.address)
 
@@ -252,6 +260,8 @@ class Client(Interface):
         if create_server or address is None:
             if address is None:
                 address = 'ipc://server-%s' % str(uuid.uuid1())
+            if isinstance(address, unicode):
+                address = address.encode()
             self.server_process = Process(target=Server,
                                           args=(),
                                           kwargs=merge(kwargs,
@@ -304,11 +314,11 @@ class Client(Interface):
 
     def _delete(self, keys, lock=None):
         log('Client deletes', self.address, str(len(keys)) + ' keys')
-        keys = map(serialize_key, keys)
+        keys = list(map(serialize_key, keys))
         self.send(b'delete', keys)
 
     def _iset(self, key, value):
-        self.send(b'iset', [key, value])
+        self.send(b'iset', [serialize_key(key), value])
 
     def drop(self):
         self.send(b'drop', [])
