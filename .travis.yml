@@ -19,7 +19,7 @@ install:
   - conda create -n test-environment python=$TRAVIS_PYTHON_VERSION
   - source activate test-environment
   - conda install pytest numpy pip toolz pandas pyzmq
-  - pip install locket
+  - pip install locket blosc
 
   # Install dask
   - python setup.py install
