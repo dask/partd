@@ -26,10 +26,3 @@ def test_ensure():
         p.iset('x', b'123')
         p.iset('x', b'123')
         assert p.get('x') == b'123'
-
-
-def test_del():
-    f = Encode(zlib.compress, zlib.decompress, b''.join)
-    assert os.path.exists(f.partd.path)
-    f.__del__()
-    assert not os.path.exists(f.partd.path)

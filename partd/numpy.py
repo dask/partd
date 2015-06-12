@@ -7,7 +7,7 @@ description of the array's dtype.
 from __future__ import absolute_import
 import numpy as np
 from functools import partial
-from .compatibility import pickle
+from .compatibility import pickle, unicode
 from .utils import frame, framesplit, suffix, ignoring
 
 def serialize_dtype(dt):
@@ -102,6 +102,15 @@ def serialize(x):
         return x.tobytes()
 
 
+def decode(o):
+    if isinstance(o, list) and isinstance(o[0], bytes):
+        return [item.decode() for item in o]
+    elif isinstance(o, list):
+        return list(map(decode, o))
+    elif isinstance(o, bytes):
+        return o.decode()
+    raise NotImplementedError()
+
 def deserialize(bytes, dtype, copy=False):
     if dtype == 'O':
         try:
@@ -109,7 +118,7 @@ def deserialize(bytes, dtype, copy=False):
         except:
             l = list(concat(map(pickle.loads, framesplit(bytes))))
 
-        l = [o.decode() for o in l]
+        l = decode(l)
 
         return np.array(l, dtype='O')
     else:

@@ -7,7 +7,7 @@ from math import sin
 
 
 def test_pack_unpack():
-    data = [1, 2, 'Hello']
+    data = [1, 2, b'Hello']
     assert loads(dumps(data)) == data
 
     data = [1, 2, sin]

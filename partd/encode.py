@@ -38,9 +38,6 @@ class Encode(Interface):
     def drop(self):
         return self.partd.drop()
 
-    def __del__(self):
-        self.partd.__del__()
-
     @property
     def lock(self):
         return self.partd.lock

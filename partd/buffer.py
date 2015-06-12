@@ -7,19 +7,21 @@ from collections import defaultdict
 from .compatibility import Queue, Empty
 
 
+def zero():
+    return 0
+
 class Buffer(Interface):
     def __init__(self, fast, slow, available_memory=1e9):
         self.lock = Lock()
         self.fast = fast
         self.slow = slow
         self.available_memory = available_memory
-        self.lengths = defaultdict(lambda: 0)
+        self.lengths = defaultdict(zero)
         self.memory_usage = 0
         Interface.__init__(self)
 
     def __getstate__(self):
-        return {'data': self.data,
-                'fast': self.fast,
+        return {'fast': self.fast,
                 'slow': self.slow,
                 'total_memory': self.memory_usage,
                 'lengths': self.lengths,

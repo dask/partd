@@ -1,5 +1,7 @@
 from partd.dict import Dict
+from partd.file import File
 from partd.buffer import Buffer, keys_to_flush
+import pickle
 
 import shutil
 import os
@@ -28,3 +30,15 @@ def test_partd():
 def test_keys_to_flush():
     lengths = {'a': 20, 'b': 10, 'c': 15, 'd': 15, 'e': 10, 'f': 25, 'g': 5}
     assert keys_to_flush(lengths, 0.5) == ['f', 'a']
+
+
+def test_pickle():
+    with Dict() as a:
+        with File() as b:
+            c = Buffer(a, b)
+
+            c.append({'x': b'123'})
+
+            d = pickle.loads(pickle.dumps(c))
+
+            assert d.get('x') == c.get('x')
