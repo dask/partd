@@ -30,7 +30,7 @@ class File(Interface):
         Interface.__setstate__(self, state)
         File.__init__(self, state['path'])
 
-    def append(self, data, lock=True, fsync=True, **kwargs):
+    def append(self, data, lock=True, fsync=False, **kwargs):
         if lock: self.lock.acquire()
         try:
             for k, v in data.items():
