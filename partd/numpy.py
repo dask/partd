@@ -102,10 +102,13 @@ def serialize(x):
 
 
 def decode(o):
-    if isinstance(o, list) and isinstance(o[0], bytes):
-        return [item.decode() for item in o]
-    elif isinstance(o, list):
-        return list(map(decode, o))
+    if isinstance(o, list):
+        if not o:
+            return []
+        elif isinstance(o[0], bytes):
+            return [item.decode() for item in o]
+        else:
+            return list(map(decode, o))
     elif isinstance(o, bytes):
         return o.decode()
     raise NotImplementedError()

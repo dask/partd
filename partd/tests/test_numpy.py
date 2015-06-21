@@ -5,7 +5,7 @@ import os
 import shutil
 import pickle
 
-from partd.numpy import Numpy
+from partd.numpy import Numpy, decode
 
 def test_numpy():
     dt = np.dtype([('a', 'i4'), ('b', 'i2'), ('c', 'f8')])
@@ -56,3 +56,7 @@ def test_datetime_types():
         p.append({'x': x, 'y': y})
         assert p.get('x').dtype == x.dtype
         assert p.get('y').dtype == y.dtype
+
+
+def test_decode_empty():
+    assert decode([]) == []
