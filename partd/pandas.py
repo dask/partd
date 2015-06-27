@@ -137,4 +137,11 @@ def deserialize(bytes):
 
 from .encode import Encode
 
-PandasBlocks = partial(Encode, serialize, deserialize, pd.concat)
+
+def join(dfs):
+    if not dfs:
+        return pd.DataFrame()
+    else:
+        return pd.concat(dfs)
+
+PandasBlocks = partial(Encode, serialize, deserialize, join)

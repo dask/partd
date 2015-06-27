@@ -3,6 +3,7 @@ from __future__ import absolute_import, print_function
 import zmq
 from itertools import chain
 from bisect import bisect
+import socket
 from operator import add
 from time import sleep, time
 from toolz import accumulate, topk, pluck, merge, keymap
@@ -56,7 +57,8 @@ def logerrors():
 
 
 class Server(object):
-    def __init__(self, partd=None, address=None, start=True, block=False):
+    def __init__(self, partd=None, bind=None, start=True, block=False,
+            hostname=None):
         self.context = zmq.Context()
         if partd is None:
             partd = Buffer(Dict(), File())
@@ -64,12 +66,18 @@ class Server(object):
 
         self.socket = self.context.socket(zmq.ROUTER)
 
-        if address is None:
-            address = 'ipc://server-%s' % str(uuid.uuid1())
-        if isinstance(address, unicode):
-            address = address.encode()
-        self.address = address
-        self.socket.bind(self.address)
+        if hostname is None:
+            hostname = socket.gethostname()
+        if isinstance(hostname, unicode):
+            hostname = hostname.encode()
+        if isinstance(bind, unicode):
+            bind = bind.encode()
+        if bind is None:
+            port = self.socket.bind_to_random_port('tcp://*')
+        else:
+            self.socket.bind(bind)
+            port = int(bind.split(':')[-1].rstrip('/'))
+        self.address = b'tcp://%s:%d' % (hostname, port)
 
         self.status = 'created'
 
