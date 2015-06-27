@@ -4,7 +4,7 @@ from os.path import exists
 from setuptools import setup
 
 setup(name='partd',
-      version='0.3.0',
+      version='0.3.1',
       description='Appendable key-value storage',
       url='http://github.com/mrocklin/partd/',
       maintainer='Matthew Rocklin',
