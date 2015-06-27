@@ -118,7 +118,7 @@ def test_drop():
         assert p.get('x') == b''
 
 
-def test_server_autocreation():
+def dont_test_server_autocreation():
     with Client() as p:
         p.append({'x': b'123'})
         assert p.get('x') == b'123'

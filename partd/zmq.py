@@ -265,18 +265,6 @@ from .file import File
 
 class Client(Interface):
     def __init__(self, address=None, create_server=False, **kwargs):
-        if create_server or address is None:
-            if address is None:
-                address = 'ipc://server-%s' % str(uuid.uuid1())
-            if isinstance(address, unicode):
-                address = address.encode()
-            self.server_process = Process(target=Server,
-                                          args=(),
-                                          kwargs=merge(kwargs,
-                                          {'block': True, 'address': address,
-                                           'start': True}))
-            self.server_process.start()
-
         self.address = address
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.DEALER)
