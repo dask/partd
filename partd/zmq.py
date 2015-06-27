@@ -68,8 +68,6 @@ class Server(object):
 
         if hostname is None:
             hostname = socket.gethostname()
-        if isinstance(hostname, unicode):
-            hostname = hostname.encode()
         if isinstance(bind, unicode):
             bind = bind.encode()
         if bind is None:
@@ -77,7 +75,7 @@ class Server(object):
         else:
             self.socket.bind(bind)
             port = int(bind.split(':')[-1].rstrip('/'))
-        self.address = b'tcp://%s:%d' % (hostname, port)
+        self.address = ('tcp://%s:%d' % (hostname, port)).encode()
 
         self.status = 'created'
 
