@@ -58,5 +58,7 @@ def test_datetime_types():
         assert p.get('y').dtype == y.dtype
 
 
-def test_decode_empty():
+def test_decode():
     assert decode([]) == []
+    assert decode(np.nan) is np.nan
+    assert decode([b'a', 1]) == ['a', 1]

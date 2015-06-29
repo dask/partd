@@ -106,12 +106,16 @@ def decode(o):
         if not o:
             return []
         elif isinstance(o[0], bytes):
-            return [item.decode() for item in o]
+            try:
+                return [item.decode() for item in o]
+            except AttributeError:
+                return list(map(decode, o))
         else:
             return list(map(decode, o))
     elif isinstance(o, bytes):
         return o.decode()
-    raise NotImplementedError()
+    else:
+        return o
 
 def deserialize(bytes, dtype, copy=False):
     if dtype == 'O':
