@@ -32,3 +32,10 @@ def test_iset():
         p.iset('x', b'123')
         p.iset('x', b'123')
         assert p.get('x') == b'123'
+
+
+def test_delete_non_existent_key():
+    with Dict() as p:
+        p.append({'x': b'123'})
+        p.delete(['x', 'y'])
+        assert p.get(['x', 'y']) == [b'', b'']

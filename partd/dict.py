@@ -52,7 +52,8 @@ class Dict(Interface):
             self.lock.acquire()
         try:
             for key in keys:
-                del self.data[key]
+                if key in self.data:
+                    del self.data[key]
         finally:
             if lock:
                 self.lock.release()
