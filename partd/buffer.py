@@ -38,7 +38,7 @@ class Buffer(Interface):
             for k, v in data.items():
                 self.lengths[k] += len(v)
                 self.memory_usage += len(v)
-            self.fast.append(data, lock=lock, **kwargs)
+            self.fast.append(data, lock=False, **kwargs)
         finally:
             if lock: self.lock.release()
 
@@ -49,7 +49,8 @@ class Buffer(Interface):
     def _get(self, keys, lock=True, **kwargs):
         if lock: self.lock.acquire()
         try:
-            result = list(map(add, self.fast.get(keys), self.slow.get(keys)))
+            result = list(map(add, self.fast.get(keys, lock=False),
+                                   self.slow.get(keys, lock=False)))
         finally:
             if lock: self.lock.release()
         return result
@@ -58,15 +59,15 @@ class Buffer(Interface):
         """ Idempotent set """
         if lock: self.lock.acquire()
         try:
-            self.fast.iset(key, value, lock=lock)
+            self.fast.iset(key, value, lock=False)
         finally:
             if lock: self.lock.release()
 
     def _delete(self, keys, lock=True):
         if lock: self.lock.acquire()
         try:
-            self.fast.delete(keys)
-            self.slow.delete(keys)
+            self.fast.delete(keys, lock=False)
+            self.slow.delete(keys, lock=False)
         finally:
             if lock: self.lock.release()
 
