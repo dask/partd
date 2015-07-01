@@ -23,7 +23,7 @@ Example
 1.  Create a Partd backed by a directory::
 
         >>> import partd
-        >>> p = partd.File('/path/to/new/dataset/'')
+        >>> p = partd.File('/path/to/new/dataset/')
 
 2.  Append key-byte pairs to dataset::
 
