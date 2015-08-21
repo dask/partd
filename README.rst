@@ -123,5 +123,5 @@ serialization, buffering, and remote access.::
     >>> client = Pickle(Snappy(Client(server.address)))
     >>> client.append({'x': [1, 2, 3]})
 
-.. |Build Status| image:: https://travis-ci.org/mrocklin/partd.png
-   :target: https://travis-ci.org/mrocklin/partd
+.. |Build Status| image:: https://travis-ci.org/blaze/partd.png
+   :target: https://travis-ci.org/blaze/partd
