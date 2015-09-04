@@ -1,7 +1,7 @@
 PartD
 =====
 
-|Build Status|
+|Build Status| |Version Status|
 
 Key-value byte store with appendable values
 
@@ -125,3 +125,5 @@ serialization, buffering, and remote access.::
 
 .. |Build Status| image:: https://travis-ci.org/blaze/partd.png
    :target: https://travis-ci.org/blaze/partd
+.. |Version Status| image:: https://img.shields.io/pypi/v/partd.svg
+   :target: https://pypi.python.org/pypi/partd/
