@@ -1,3 +1,6 @@
+import pytest
+pytest.importorskip('zmq')
+
 from partd.zmq import Server, keys_to_flush, log, File, Client
 from partd import core, Dict
 from threading import Thread

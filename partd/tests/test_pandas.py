@@ -1,8 +1,14 @@
-from partd.pandas import PandasColumns, PandasBlocks
+from __future__ import absolute_import
+
+import pytest
+pytest.importorskip('numpy')
+
 import pandas as pd
 import pandas.util.testing as tm
 import os
 import shutil
+
+from partd.pandas import PandasColumns, PandasBlocks
 
 
 df1 = pd.DataFrame({'a': [1, 2, 3],
