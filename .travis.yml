@@ -19,7 +19,8 @@ install:
   - conda create -n test-environment python=$TRAVIS_PYTHON_VERSION
   - source activate test-environment
   - conda install pytest numpy pip toolz pandas pyzmq
-  - pip install locket blosc
+  - pip install locket
+  - if [[ $TRAVIS_PYTHON_VERSION != '2.6' ]]; then pip install blosc; fi
 
   # Install dask
   - python setup.py install
