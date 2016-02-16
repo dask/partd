@@ -15,4 +15,5 @@ setup(name='partd',
       install_requires=list(open('requirements.txt').read().strip().split('\n')),
       long_description=(open('README.rst').read() if exists('README.rst')
                         else ''),
+      extras_require = {'complete': ['numpy', 'pandas', 'zmq', 'blosc']},
       zip_safe=False)
