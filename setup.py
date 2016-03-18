@@ -6,7 +6,7 @@ from setuptools import setup
 setup(name='partd',
       version='0.3.2',
       description='Appendable key-value storage',
-      url='http://github.com/blaze/partd/',
+      url='http://github.com/dask/partd/',
       maintainer='Matthew Rocklin',
       maintainer_email='mrocklin@gmail.com',
       license='BSD',
