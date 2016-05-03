@@ -9,6 +9,9 @@ from .core import Interface
 from .utils import extend
 
 
+dumps = partial(pickle.dumps, protocol=pickle.HIGHEST_PROTOCOL)
+
+
 class PandasColumns(Interface):
     def __init__(self, partd=None):
         self.partd = Numpy(partd)
@@ -16,8 +19,8 @@ class PandasColumns(Interface):
 
     def append(self, data, **kwargs):
         for k, df in data.items():
-            self.iset(extend(k, '.columns'), pickle.dumps(list(df.columns)))
-            self.iset(extend(k, '.index-name'), pickle.dumps(df.index.name))
+            self.iset(extend(k, '.columns'), dumps(list(df.columns)))
+            self.iset(extend(k, '.index-name'), dumps(df.index.name))
 
         # TODO: don't use values, it does some work.  Look at _blocks instead
         #       pframe/cframe do this well
@@ -113,14 +116,14 @@ def serialize(df):
     b_blocks = [pnp.compress(pnp.serialize(block), block.dtype)
                 for block in blocks]  # this can be slightly faster if we merge both operations
     b_index = pnp.compress(pnp.serialize(index), index.dtype)
-    frames = [pickle.dumps(index_name),
-              pickle.dumps(columns),
-              pickle.dumps(placement),
-              pickle.dumps(index.dtype),
+    frames = [dumps(index_name),
+              dumps(columns),
+              dumps(placement),
+              dumps(index.dtype),
               b_index,
-              pickle.dumps([block.dtype for block in blocks]),
-              pickle.dumps([block.shape for block in blocks]),
-              pickle.dumps(categories)] + b_blocks
+              dumps([block.dtype for block in blocks]),
+              dumps([block.shape for block in blocks]),
+              dumps(categories)] + b_blocks
 
     return b''.join(map(frame, frames))
 
