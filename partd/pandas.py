@@ -104,6 +104,12 @@ def serialize(df):
     Uses Pandas blocks, snappy, and blosc to deconstruct an array into bytes
     """
     blocks, index, index_name, columns, placement = to_blocks(df)
+    categories = [(b.ordered, b.categories)
+                  if isinstance(b, pd.Categorical)
+                  else None
+                  for b in blocks]
+    blocks = [b.codes if isinstance(b, pd.Categorical) else b
+              for b in blocks]
     b_blocks = [pnp.compress(pnp.serialize(block), block.dtype)
                 for block in blocks]  # this can be slightly faster if we merge both operations
     b_index = pnp.compress(pnp.serialize(index), index.dtype)
@@ -113,7 +119,8 @@ def serialize(df):
               pickle.dumps(index.dtype),
               b_index,
               pickle.dumps([block.dtype for block in blocks]),
-              pickle.dumps([block.shape for block in blocks])] + b_blocks
+              pickle.dumps([block.shape for block in blocks]),
+              pickle.dumps(categories)] + b_blocks
 
     return b''.join(map(frame, frames))
 
@@ -128,9 +135,14 @@ def deserialize(bytes):
     index = pnp.deserialize(pnp.decompress(frames[4], dt), dt, copy=True)
     dtypes = pickle.loads(frames[5])
     shapes = pickle.loads(frames[6])
-    b_blocks = frames[7:]
+    categories = pickle.loads(frames[7])
+    b_blocks = frames[8:]
     blocks = [pnp.deserialize(pnp.decompress(block, dt), dt, copy=True).reshape(shape)
                 for block, dt, shape in zip(b_blocks, dtypes, shapes)]
+    blocks = [pd.Categorical.from_codes(b, cat[1], ordered=cat[0])
+              if cat is not None
+              else b
+              for cat, b in zip(categories, blocks)]
 
     return from_blocks(blocks, index, index_name, columns, placement)
 
