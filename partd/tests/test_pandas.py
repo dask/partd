@@ -8,7 +8,7 @@ import pandas.util.testing as tm
 import os
 import shutil
 
-from partd.pandas import PandasColumns, PandasBlocks
+from partd.pandas import PandasColumns, PandasBlocks, serialize, deserialize
 
 
 df1 = pd.DataFrame({'a': [1, 2, 3],
@@ -69,3 +69,14 @@ def test_PandasBlocks():
             result = p.get(['x'], lock=False)
 
     assert not os.path.exists(p.partd.path)
+
+
+@pytest.mark.parametrize('ordered', [False, True])
+def test_serialize_categoricals(ordered):
+    df = pd.DataFrame({'x': [1, 2, 3, 4],
+                       'y': pd.Categorical(['c', 'a', 'b', 'a'],
+                                           ordered=ordered)})
+
+    df2 = deserialize(serialize(df))
+    tm.assert_frame_equal(df, df2)
+    assert df.y.cat.ordered == df2.y.cat.ordered
