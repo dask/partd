@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 import pytest
-pytest.importorskip('numpy')
+pytest.importorskip('pandas')
 
 import pandas as pd
 import pandas.util.testing as tm
