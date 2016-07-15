@@ -24,13 +24,11 @@ class File(Interface):
         Interface.__init__(self)
 
     def __getstate__(self):
-        return {'path': self.path,
-                '_explicitly_given_path': self._explicitly_given_path}
+        return {'path': self.path}
 
     def __setstate__(self, state):
         Interface.__setstate__(self, state)
         File.__init__(self, state['path'])
-        self._explicitly_given_path = state['_explicitly_given_path']
 
     def append(self, data, lock=True, fsync=False, **kwargs):
         if lock: self.lock.acquire()
