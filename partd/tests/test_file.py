@@ -1,6 +1,7 @@
+import tempfile
+import pickle
 from partd.file import File
 
-import shutil
 import os
 
 
@@ -73,3 +74,15 @@ def test_del():
     with File('Foo') as p:
         p.__del__()
         assert os.path.exists(p.path)
+
+
+def test_pickle():
+    # test with and without explicit path
+    for path in (None, tempfile.mkdtemp('.partd')):
+        a = File(path)
+        a.append({'x': b'123'})
+        b = pickle.loads(pickle.dumps(a))
+
+        assert a.get('x') == b.get('x')
+        assert a.path == b.path
+        assert a._explicitly_given_path == b._explicitly_given_path
