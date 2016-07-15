@@ -23,7 +23,7 @@ class Buffer(Interface):
     def __getstate__(self):
         return {'fast': self.fast,
                 'slow': self.slow,
-                'total_memory': self.memory_usage,
+                'memory_usage': self.memory_usage,
                 'lengths': self.lengths,
                 'available_memory': self.available_memory}
 
