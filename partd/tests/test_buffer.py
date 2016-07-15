@@ -42,3 +42,13 @@ def test_pickle():
             d = pickle.loads(pickle.dumps(c))
 
             assert d.get('x') == c.get('x')
+
+            pickled_attrs = ('memory_usage', 'lengths', 'available_memory')
+            for attr in pickled_attrs:
+                assert hasattr(d, attr)
+                assert getattr(d, attr) == getattr(c, attr)
+            # special case Dict and File -- some attrs do not pickle
+            assert hasattr(d, 'fast')
+            assert d.fast.data == c.fast.data
+            assert hasattr(d, 'slow')
+            assert d.slow.path == c.slow.path
