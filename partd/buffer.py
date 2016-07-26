@@ -39,12 +39,13 @@ class Buffer(Interface):
                 self.lengths[k] += len(v)
                 self.memory_usage += len(v)
             self.fast.append(data, lock=False, **kwargs)
+
+            while self.memory_usage > self.available_memory:
+                keys = keys_to_flush(self.lengths, 0.1, maxcount=20)
+                self.flush(keys)
+
         finally:
             if lock: self.lock.release()
-
-        while self.memory_usage > self.available_memory:
-            keys = keys_to_flush(self.lengths, 0.1, maxcount=20)
-            self.flush(keys)
 
     def _get(self, keys, lock=True, **kwargs):
         if lock: self.lock.acquire()
