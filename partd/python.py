@@ -22,13 +22,13 @@ from functools import partial
 
 def dumps(x):
     try:
-        return msgpack.packb(x)
+        return msgpack.packb(x, use_bin_type=True)
     except:
         return pickle.dumps(x, protocol=pickle.HIGHEST_PROTOCOL)
 
 def loads(x):
     try:
-        return msgpack.unpackb(x)
+        return msgpack.unpackb(x, encoding='utf8')
     except:
         return pickle.loads(x)
 
