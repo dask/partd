@@ -26,7 +26,7 @@ from .utils import ignoring
 tuple_sep = b'-|-'
 
 def log(*args):
-    with open('log', 'a') as f:
+    with open('partd.log', 'a') as f:
         print(datetime.now(), *args, file=f)
 
 
