@@ -30,8 +30,6 @@ def log(*args):
         print(datetime.now(), *args, file=f)
 
 
-log('Import zmq')
-
 @contextmanager
 def logduration(message, nbytes=None):
     start = time()
