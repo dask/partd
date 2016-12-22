@@ -1,6 +1,7 @@
 from __future__ import absolute_import, print_function
 
 import zmq
+import logging
 from itertools import chain
 from bisect import bisect
 import socket
@@ -25,32 +26,15 @@ from .utils import ignoring
 
 tuple_sep = b'-|-'
 
-def log(*args):
-    with open('partd.log', 'a') as f:
-        print(datetime.now(), *args, file=f)
+logger = logging.getLogger(__name__)
 
-
-@contextmanager
-def logduration(message, nbytes=None):
-    start = time()
-    try:
-        yield
-    finally:
-        end = time()
-        log(message, end - start)
-        if nbytes:
-            log("MB/s:", nbytes / (end - start) / 1e6)
 
 @contextmanager
 def logerrors():
     try:
         yield
     except Exception as e:
-        log('Error!', str(e))
-        exc_type, exc_value, exc_traceback = sys.exc_info()
-        tb = ''.join(traceback.format_tb(exc_traceback))
-        log('Error!', str(e))
-        log('Traceback', str(tb))
+        logger.exception(e)
         raise
 
 
@@ -92,7 +76,7 @@ class Server(object):
             self.status = 'run'
             self._listen_thread = Thread(target=self.listen)
             self._listen_thread.start()
-            log('Start server at', self.address)
+            logger.debug('Start server at %s', self.address)
 
     def block(self):
         """ Block until all threads close """
@@ -103,7 +87,7 @@ class Server(object):
 
     def listen(self):
         with logerrors():
-            log(self.address, 'start listening')
+            logger.debug('Start listening %s', self.address)
             while self.status != 'closed':
                 if not self.socket.poll(100):
                     continue
@@ -112,9 +96,9 @@ class Server(object):
                     payload = self.socket.recv_multipart()
 
                 address, command, payload = payload[0], payload[1], payload[2:]
-                log('Server receives', address, command)
+                logger.debug('Server receives %s %s', address, command)
                 if command == b'close':
-                    log('Server closes')
+                    logger.debug('Server closes')
                     self.ack(address)
                     self.status = 'closed'
                     break
@@ -125,7 +109,7 @@ class Server(object):
                     keys = list(map(deserialize_key, keys))
                     data = dict(zip(keys, values))
                     self.partd.append(data, lock=False)
-                    log('Server appends %d keys' % len(data))
+                    logger.debug('Server appends %d keys', len(data))
                     self.ack(address)
 
                 elif command == b'iset':
@@ -136,14 +120,14 @@ class Server(object):
 
                 elif command == b'get':
                     keys = list(map(deserialize_key, payload))
-                    log('get', keys)
+                    logger.debug('get %s', keys)
                     result = self.get(keys)
                     self.send_to_client(address, result)
                     self.ack(address, flow_control=False)
 
                 elif command == b'delete':
                     keys = list(map(deserialize_key, payload))
-                    log('delete', keys)
+                    logger.debug('delete %s', keys)
                     self.partd.delete(keys, lock=False)
                     self.ack(address, flow_control=False)
 
@@ -155,7 +139,7 @@ class Server(object):
                     self.ack(address)
 
                 else:
-                    log("Unknown command", command)
+                    logger.debug("Unknown command: %s", command)
                     raise ValueError("Unknown command: " + command)
 
     def send_to_client(self, address, result):
@@ -167,12 +151,12 @@ class Server(object):
 
     def ack(self, address, flow_control=True):
         with logerrors():
-            log('Server sends ack')
+            logger.debug('Server sends ack')
             self.send_to_client(address, b'ack')
 
     def append(self, data):
         self.partd.append(data, lock=False)
-        log('Server appends %d keys' % len(data))
+        logger.debug('Server appends %d keys', len(data))
 
     def drop(self):
         with logerrors():
@@ -180,13 +164,13 @@ class Server(object):
 
     def get(self, keys):
         with logerrors():
-            log('Server gets keys', keys)
+            logger.debug('Server gets keys: %s', keys)
             with self._lock:
                 result = self.partd.get(keys, lock=False)
             return result
 
     def close(self):
-        log('Server closes')
+        logger.debug('Server closes')
         self.status = 'closed'
         self.block()
         with ignoring(zmq.error.ZMQError):
@@ -264,7 +248,7 @@ class Client(Interface):
         self.address = address
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.DEALER)
-        log('Client connects to %s' % address)
+        logger.debug('Client connects to %s', address)
         self.socket.connect(address)
         self.send(b'syn', [], ack_required=False)
         self.lock = NotALock()  # Server sequentializes everything
@@ -275,13 +259,13 @@ class Client(Interface):
 
     def __setstate__(self, state):
         self.__init__(state['address'])
-        log('Reconstruct client from pickled state')
+        logger.debug('Reconstruct client from pickled state')
 
     def send(self, command, payload, recv=False, ack_required=True):
         if ack_required:
             ack = self.socket.recv_multipart()
             assert ack == [b'ack']
-        log('Client sends command', command)
+        logger.debug('Client sends command: %s', command)
         self.socket.send_multipart([command] + payload)
         if recv:
             result = self.socket.recv_multipart()
@@ -294,18 +278,18 @@ class Client(Interface):
 
         Lock argument is ignored.  Everything is sequential (I think)
         """
-        log('Client gets', self.address, keys)
+        logger.debug('Client gets %s %s', self.address, keys)
         keys = list(map(serialize_key, keys))
         return self.send(b'get', keys, recv=True)
 
     def append(self, data, lock=None):
-        log('Client appends', self.address, str(len(data)) + ' keys')
+        logger.debug('Client appends %s %s', self.address, str(len(data)) + ' keys')
         data = keymap(serialize_key, data)
         payload = list(chain.from_iterable(data.items()))
         self.send(b'append', payload)
 
     def _delete(self, keys, lock=None):
-        log('Client deletes', self.address, str(len(keys)) + ' keys')
+        logger.debug('Client deletes %s %s', self.address, str(len(keys)) + ' keys')
         keys = list(map(serialize_key, keys))
         self.send(b'delete', keys)
 
