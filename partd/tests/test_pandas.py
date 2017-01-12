@@ -1,12 +1,11 @@
 from __future__ import absolute_import
 
 import pytest
-pytest.importorskip('pandas')
+pytest.importorskip('pandas')  # noqa
 
 import pandas as pd
 import pandas.util.testing as tm
 import os
-import shutil
 
 from partd.pandas import PandasColumns, PandasBlocks, serialize, deserialize
 
@@ -43,7 +42,6 @@ def test_PandasColumns():
     assert not os.path.exists(p.partd.partd.path)
 
 
-
 def test_column_selection():
     with PandasColumns('foo') as p:
         p.append({'x': df1, 'y': df2})
@@ -73,10 +71,14 @@ def test_PandasBlocks():
 
 @pytest.mark.parametrize('ordered', [False, True])
 def test_serialize_categoricals(ordered):
-    df = pd.DataFrame({'x': [1, 2, 3, 4],
-                       'y': pd.Categorical(['c', 'a', 'b', 'a'],
-                                           ordered=ordered)})
+    frame = pd.DataFrame({'x': [1, 2, 3, 4],
+                          'y': pd.Categorical(['c', 'a', 'b', 'a'],
+                                              ordered=ordered)},
+                          index=pd.Categorical(['x', 'y', 'z', 'x'],
+                                                ordered=ordered))
+    frame.index.name = 'foo'
+    frame.columns.name = 'bar'
 
-    df2 = deserialize(serialize(df))
-    tm.assert_frame_equal(df, df2)
-    assert df.y.cat.ordered == df2.y.cat.ordered
+    for ind, df in [(0, frame), (1, frame.T)]:
+        df2 = deserialize(serialize(df))
+        tm.assert_frame_equal(df, df2)
