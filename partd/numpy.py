@@ -6,9 +6,12 @@ description of the array's dtype.
 """
 from __future__ import absolute_import
 import numpy as np
-from toolz import valmap, concat, identity, partial
-from .compatibility import pickle, unicode
+from toolz import valmap, identity, partial
+from .compatibility import pickle
+from .core import Interface
+from .file import File
 from .utils import frame, framesplit, suffix, ignoring
+
 
 def serialize_dtype(dt):
     """ Serialize dtype to bytes
@@ -34,10 +37,6 @@ def parse_dtype(s):
         return np.dtype(eval(s))  # Dangerous!
     else:
         return np.dtype(s)
-
-
-from .core import Interface
-from .file import File
 
 
 class Numpy(Interface):
@@ -94,39 +93,28 @@ except ImportError:
 
 def serialize(x):
     if x.dtype == 'O':
+        l = x.flatten().tolist()
         with ignoring(Exception):  # Try msgpack (faster on strings)
-            return frame(msgpack.packb(x.tolist()))
-        return frame(pickle.dumps(x.tolist(), protocol=pickle.HIGHEST_PROTOCOL))
+            return frame(msgpack.packb(l))
+        return frame(pickle.dumps(l, protocol=pickle.HIGHEST_PROTOCOL))
     else:
         return x.tobytes()
 
 
-def decode(o):
-    if isinstance(o, list):
-        if not o:
-            return []
-        elif isinstance(o[0], bytes):
-            try:
-                return [item.decode() for item in o]
-            except AttributeError:
-                return list(map(decode, o))
-        else:
-            return list(map(decode, o))
-    elif isinstance(o, bytes):
-        return o.decode()
-    else:
-        return o
-
 def deserialize(bytes, dtype, copy=False):
     if dtype == 'O':
         try:
-            l = list(concat(map(msgpack.unpackb, framesplit(bytes))))
+            blocks = [msgpack.unpackb(f, encoding='utf-8')
+                      for f in framesplit(bytes)]
         except:
-            l = list(concat(map(pickle.loads, framesplit(bytes))))
+            blocks = [pickle.loads(f) for f in framesplit(bytes)]
 
-        l = decode(l)
-
-        return np.array(l, dtype='O')
+        result = np.empty(sum(map(len, blocks)), dtype='O')
+        i = 0
+        for block in blocks:
+            result[i:i + len(block)] = block
+            i += len(block)
+        return result
     else:
         result = np.frombuffer(bytes, dtype)
         if copy:

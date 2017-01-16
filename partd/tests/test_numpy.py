@@ -1,14 +1,12 @@
 from __future__ import absolute_import
 
 import pytest
-pytest.importorskip('numpy')
+np = pytest.importorskip('numpy')  # noqa
 
-import numpy as np
-import os
-import shutil
 import pickle
 
-from partd.numpy import Numpy, decode
+from partd.numpy import Numpy
+
 
 def test_numpy():
     dt = np.dtype([('a', 'i4'), ('b', 'i2'), ('c', 'f8')])
@@ -43,8 +41,13 @@ def test_serialization():
         assert (q.get('x') == [1, 2, 3]).all()
 
 
-def test_object_dtype():
-    x = np.array(['Alice', 'Bob', 'Charlie'], dtype='O')
+array_of_lists = np.empty(3, dtype='O')
+array_of_lists[:] = [[1, 2], [3, 4], [5, 6]]
+
+
+@pytest.mark.parametrize('x', [np.array(['Alice', 'Bob', 'Charlie'], dtype='O'),
+                               array_of_lists])
+def test_object_dtype(x):
     with Numpy() as p:
         p.append({'x': x})
         p.append({'x': x})
@@ -59,9 +62,3 @@ def test_datetime_types():
         p.append({'x': x, 'y': y})
         assert p.get('x').dtype == x.dtype
         assert p.get('y').dtype == y.dtype
-
-
-def test_decode():
-    assert decode([]) == []
-    assert decode(np.nan) is np.nan
-    assert decode([b'a', 1]) == ['a', 1]

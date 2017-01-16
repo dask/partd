@@ -76,20 +76,56 @@ class PandasColumns(Interface):
         self.partd.__del__()
 
 
-def to_names_values_placement(df):
-    names = (df.columns.name, df.index.name)
-    values = [df.columns.values, df.index.values]
-    values.extend([block.values for block in df._data.blocks])
-    placement = [b.mgr_locs.as_array for b in df._data.blocks]
-    return names, values, placement
+def index_to_header_bytes(ind):
+    # These have special `__reduce__` methods, just use pickle
+    if isinstance(ind, (pd.DatetimeIndex,
+                        pd.MultiIndex,
+                        pd.RangeIndex)):
+        return None, dumps(ind)
+
+    if isinstance(ind, pd.CategoricalIndex):
+        cat = (ind.ordered, ind.categories)
+        values = ind.codes
+    else:
+        cat = None
+        values = ind.values
+
+    header = (type(ind), ind._get_attributes_dict(), values.dtype, cat)
+    bytes = pnp.compress(pnp.serialize(values), values.dtype)
+    return header, bytes
 
 
-def from_names_values_placement(names, values, placement):
-    axes = [pd.Index(values[0], name=names[0]),
-            pd.Index(values[1], name=names[1])]
-    blocks = [make_block(b, placement=placement[i])
-              for i, b in enumerate(values[2:])]
-    return pd.DataFrame(create_block_manager_from_blocks(blocks, axes))
+def index_from_header_bytes(header, bytes):
+    if header is None:
+        return pickle.loads(bytes)
+
+    typ, attr, dtype, cat = header
+    data = pnp.deserialize(pnp.decompress(bytes, dtype), dtype, copy=True)
+    if cat:
+        data = pd.Categorical.from_codes(data, cat[1], ordered=cat[0])
+    return typ.__new__(typ, data=data, **attr)
+
+
+def block_to_header_bytes(block):
+    values = block.values
+    if isinstance(values, pd.Categorical):
+        cat = (values.ordered, values.categories)
+        values = values.codes
+    else:
+        cat = None
+
+    header = (block.mgr_locs.as_array, values.dtype, values.shape, cat)
+    bytes = pnp.compress(pnp.serialize(values), values.dtype)
+    return header, bytes
+
+
+def block_from_header_bytes(header, bytes):
+    placement, dtype, shape, cat = header
+    values = pnp.deserialize(pnp.decompress(bytes, dtype), dtype,
+                             copy=True).reshape(shape)
+    if cat:
+        values = pd.Categorical.from_codes(values, cat[1], ordered=cat[0])
+    return make_block(values, placement=placement)
 
 
 def serialize(df):
@@ -97,41 +133,30 @@ def serialize(df):
 
     Uses Pandas blocks, snappy, and blosc to deconstruct an array into bytes
     """
-    names, values, placement = to_names_values_placement(df)
+    col_header, col_bytes = index_to_header_bytes(df.columns)
+    ind_header, ind_bytes = index_to_header_bytes(df.index)
+    headers = [col_header, ind_header]
+    bytes = [col_bytes, ind_bytes]
 
-    categories = [(x.ordered, x.categories) if isinstance(x, pd.Categorical)
-                   else None for x in values]
-    values = [x.codes if isinstance(x, pd.Categorical) else x
-              for x in values]
-    # this can be slightly faster if we merge both operations
-    b_values = [pnp.compress(pnp.serialize(x), x.dtype) for x in values]
+    for block in df._data.blocks:
+        h, b = block_to_header_bytes(block)
+        headers.append(h)
+        bytes.append(b)
 
-    frames = [dumps(names),
-              dumps(placement),
-              dumps([x.dtype for x in values]),
-              dumps([x.shape for x in values]),
-              dumps(categories)] + b_values
-
+    frames = [dumps(headers)] + bytes
     return b''.join(map(frame, frames))
 
 
 def deserialize(bytes):
     """ Deserialize and decompress bytes back to a pandas DataFrame """
     frames = list(framesplit(bytes))
-    names = pickle.loads(frames[0])
-    placement = pickle.loads(frames[1])
-    dtypes = pickle.loads(frames[2])
-    shapes = pickle.loads(frames[3])
-    categories = pickle.loads(frames[4])
-    b_values = frames[5:]
-    values = [pnp.deserialize(pnp.decompress(block, dt),
-                              dt, copy=True).reshape(shape)
-              for block, dt, shape in zip(b_values, dtypes, shapes)]
-    values = [pd.Categorical.from_codes(b, cat[1], ordered=cat[0])
-              if cat is not None else b
-              for cat, b in zip(categories, values)]
-
-    return from_names_values_placement(names, values, placement)
+    headers = pickle.loads(frames[0])
+    bytes = frames[1:]
+    axes = [index_from_header_bytes(headers[0], bytes[0]),
+            index_from_header_bytes(headers[1], bytes[1])]
+    blocks = [block_from_header_bytes(h, b)
+              for (h, b) in zip(headers[2:], bytes[2:])]
+    return pd.DataFrame(create_block_manager_from_blocks(blocks, axes))
 
 
 def join(dfs):
