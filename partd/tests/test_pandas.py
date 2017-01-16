@@ -82,3 +82,15 @@ def test_serialize_categoricals(ordered):
     for ind, df in [(0, frame), (1, frame.T)]:
         df2 = deserialize(serialize(df))
         tm.assert_frame_equal(df, df2)
+
+
+def test_serialize_multi_index():
+    df = pd.DataFrame({'x': ['a', 'b', 'c', 'a', 'b', 'c'],
+                       'y': [1, 2, 3, 4, 5, 6],
+                       'z': [7., 8, 9, 10, 11, 12]})
+    df = df.groupby([df.x, df.y]).sum()
+    df.index.name = 'foo'
+    df.columns.name = 'bar'
+
+    df2 = deserialize(serialize(df))
+    tm.assert_frame_equal(df, df2)
