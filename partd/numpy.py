@@ -104,9 +104,13 @@ def serialize(x):
 def deserialize(bytes, dtype, copy=False):
     if dtype == 'O':
         try:
-            blocks = [msgpack.unpackb(f) for f in framesplit(bytes)]
+            blocks = [msgpack.unpackb(f, encoding='utf-8')
+                      for f in framesplit(bytes)]
         except Exception:
-            blocks = [pickle.loads(f) for f in framesplit(bytes)]
+            try:
+                blocks = [msgpack.unpackb(f) for f in framesplit(bytes)]
+            except Exception:
+                blocks = [pickle.loads(f) for f in framesplit(bytes)]
 
         result = np.empty(sum(map(len, blocks)), dtype='O')
         i = 0
