@@ -95,7 +95,7 @@ def serialize(x):
     if x.dtype == 'O':
         l = x.flatten().tolist()
         with ignoring(Exception):  # Try msgpack (faster on strings)
-            return frame(msgpack.packb(l), use_bin_type=True)
+            return frame(msgpack.packb(l, use_bin_type=True))
         return frame(pickle.dumps(l, protocol=pickle.HIGHEST_PROTOCOL))
     else:
         return x.tobytes()
