@@ -5,6 +5,7 @@ np = pytest.importorskip('numpy')  # noqa
 
 import pickle
 
+import partd
 from partd.numpy import Numpy
 
 
@@ -62,3 +63,10 @@ def test_datetime_types():
         p.append({'x': x, 'y': y})
         assert p.get('x').dtype == x.dtype
         assert p.get('y').dtype == y.dtype
+
+
+def test_non_utf8_bytes():
+    a = np.array([b'\xc3\x28', b'\xa0\xa1', b'\xe2\x28\xa1', b'\xe2\x82\x28',
+                  b'\xf0\x28\x8c\xbc'], dtype='O')
+    s = partd.numpy.serialize(a)
+    assert (partd.numpy.deserialize(s, 'O') == a).all()

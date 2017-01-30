@@ -95,7 +95,7 @@ def serialize(x):
     if x.dtype == 'O':
         l = x.flatten().tolist()
         with ignoring(Exception):  # Try msgpack (faster on strings)
-            return frame(msgpack.packb(l))
+            return frame(msgpack.packb(l, use_bin_type=True))
         return frame(pickle.dumps(l, protocol=pickle.HIGHEST_PROTOCOL))
     else:
         return x.tobytes()
@@ -106,7 +106,7 @@ def deserialize(bytes, dtype, copy=False):
         try:
             blocks = [msgpack.unpackb(f, encoding='utf-8')
                       for f in framesplit(bytes)]
-        except:
+        except Exception:
             blocks = [pickle.loads(f) for f in framesplit(bytes)]
 
         result = np.empty(sum(map(len, blocks)), dtype='O')
