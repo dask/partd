@@ -73,3 +73,8 @@ def test_del():
     with File('Foo') as p:
         p.__del__()
         assert os.path.exists(p.path)
+
+
+def test_specify_dirname():
+    with File(dir=os.getcwd()) as f:
+        assert os.getcwd() in f.path

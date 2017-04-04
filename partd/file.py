@@ -10,9 +10,9 @@ from .utils import ignoring
 
 
 class File(Interface):
-    def __init__(self, path=None):
+    def __init__(self, path=None, dir=None):
         if not path:
-            path = tempfile.mkdtemp('.partd')
+            path = tempfile.mkdtemp(suffix='.partd', dir=dir)
             self._explicitly_given_path = False
         else:
             self._explicitly_given_path = True
