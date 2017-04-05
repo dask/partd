@@ -1,18 +1,21 @@
 from __future__ import absolute_import
 
-from .core import Interface
-import locket
-import tempfile
+import atexit
 import os
 import shutil
 import string
+import tempfile
+
+from .core import Interface
+import locket
 from .utils import ignoring
 
 
 class File(Interface):
-    def __init__(self, path=None):
+    def __init__(self, path=None, dir=None):
         if not path:
-            path = tempfile.mkdtemp('.partd')
+            path = tempfile.mkdtemp(suffix='.partd', dir=dir)
+            cleanup_files.append(path)
             self._explicitly_given_path = False
         else:
             self._explicitly_given_path = True
@@ -139,3 +142,12 @@ def token(key):
         return os.path.join(*map(token, key))
     else:
         return str(key)
+
+
+cleanup_files = list()
+
+@atexit.register
+def cleanup():
+    for fn in cleanup_files:
+        if os.path.exists(fn):
+            shutil.rmtree(fn)
