@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 from functools import partial
 
+import numpy as np
 import pandas as pd
 from pandas.core.internals import create_block_manager_from_blocks, make_block
 
@@ -13,6 +14,10 @@ from .utils import extend, framesplit, frame
 
 
 dumps = partial(pickle.dumps, protocol=pickle.HIGHEST_PROTOCOL)
+
+_NO_EXTENSION = 0
+_EXTENSION_CATEGORICAL = 1
+_EXTENSION_DATETIME_WITH_TZ = 2
 
 
 class PandasColumns(Interface):
@@ -109,22 +114,33 @@ def index_from_header_bytes(header, bytes):
 def block_to_header_bytes(block):
     values = block.values
     if isinstance(values, pd.Categorical):
-        cat = (values.ordered, values.categories)
+        extension = (_EXTENSION_CATEGORICAL, (values.ordered,
+                                              values.categories))
         values = values.codes
+    elif pd.api.types.is_datetime64tz_dtype(block):
+        # TODO: compat with older pandas?
+        extension = (_EXTENSION_DATETIME_WITH_TZ, (block.values.tzinfo,))
+        values = np.asarray(values)
     else:
-        cat = None
+        extension = (_NO_EXTENSION, ())
 
-    header = (block.mgr_locs.as_array, values.dtype, values.shape, cat)
+    header = (block.mgr_locs.as_array, values.dtype, values.shape, extension)
     bytes = pnp.compress(pnp.serialize(values), values.dtype)
     return header, bytes
 
 
 def block_from_header_bytes(header, bytes):
-    placement, dtype, shape, cat = header
+    placement, dtype, shape, (extension_type, extension_values) = header
     values = pnp.deserialize(pnp.decompress(bytes, dtype), dtype,
                              copy=True).reshape(shape)
-    if cat:
-        values = pd.Categorical.from_codes(values, cat[1], ordered=cat[0])
+    if extension_type == _EXTENSION_CATEGORICAL:
+        values = pd.Categorical.from_codes(values,
+                                           extension_values[1],
+                                           ordered=extension_values[0])
+    elif extension_type == _EXTENSION_DATETIME_WITH_TZ:
+        tz_info = extension_values[0]
+        values = pd.DatetimeIndex(values).tz_localize('utc').tz_convert(
+            tz_info)
     return make_block(values, placement=placement)
 
 

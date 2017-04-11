@@ -1,8 +1,11 @@
 from __future__ import absolute_import
 
+import datetime
+
 import pytest
 pytest.importorskip('pandas')  # noqa
 
+import numpy as np
 import pandas as pd
 import pandas.util.testing as tm
 import os
@@ -92,5 +95,35 @@ def test_serialize_multi_index():
     df.index.name = 'foo'
     df.columns.name = 'bar'
 
+    df2 = deserialize(serialize(df))
+    tm.assert_frame_equal(df, df2)
+
+
+def test_datetime_with_tz():
+    # https://github.com/dask/dask/issues/2200
+    import dask.dataframe as dd
+    df = pd.DataFrame({'x': [
+        pd.Timestamp(pd.datetime.strptime('03/Mar/1987:01:01:01 +0001',
+                                          '%d/%b/%Y:%H:%M:%S %z')) +
+        pd.Timedelta(seconds=i) for i in np.random.randint(0, 1000, size=10)],
+                       'y': list(range(10)),
+                       'z': pd.date_range('2017', periods=10)})
+    ddf = dd.from_pandas(df, npartitions=3)
+    ddf.set_index('z').compute()  # OK
+    ddf.set_index('x').compute()
+
+
+@pytest.mark.parametrize('base', [
+    pd.Timestamp('1987-03-3T01:01:01+0001'),
+    pd.Timestamp('1987-03-03 01:01:01-0600', tz='US/Central'),
+    datetime.datetime.strptime('03/Mar/1987:01:01:01 +0001',
+                               '%d/%b/%Y:%H:%M:%S %z'),
+])
+def test_serialize(base):
+    df = pd.DataFrame({'x': [
+        base + pd.Timedelta(seconds=i)
+        for i in np.random.randint(0, 1000, size=10)],
+                       'y': list(range(10)),
+                       'z': pd.date_range('2017', periods=10)})
     df2 = deserialize(serialize(df))
     tm.assert_frame_equal(df, df2)
