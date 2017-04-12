@@ -15,9 +15,9 @@ from .utils import extend, framesplit, frame
 
 dumps = partial(pickle.dumps, protocol=pickle.HIGHEST_PROTOCOL)
 
-_NO_EXTENSION = 'numpy_type'
-_EXTENSION_CATEGORICAL = 'categorical_type'
-_EXTENSION_DATETIME_WITH_TZ = 'datetime64_tz_type'
+_NUMPY = 'numpy_type'
+_CATEGORICAL = 'categorical_type'
+_DATETIME_WITH_TZ = 'datetime64_tz_type'
 
 
 class PandasColumns(Interface):
@@ -120,15 +120,14 @@ def block_to_header_bytes(block):
         from pandas.core.common import is_datetime64tz_dtype
 
     if isinstance(values, pd.Categorical):
-        extension = (_EXTENSION_CATEGORICAL, (values.ordered,
-                                              values.categories))
+        extension = (_CATEGORICAL, (values.ordered, values.categories))
         values = values.codes
     elif is_datetime64tz_dtype(block):
         # TODO: compat with older pandas?
-        extension = (_EXTENSION_DATETIME_WITH_TZ, (block.values.tzinfo,))
+        extension = (_DATETIME_WITH_TZ, (block.values.tzinfo,))
         values = np.asarray(values)
     else:
-        extension = (_NO_EXTENSION, ())
+        extension = (_NUMPY, ())
 
     header = (block.mgr_locs.as_array, values.dtype, values.shape, extension)
     bytes = pnp.compress(pnp.serialize(values), values.dtype)
@@ -139,11 +138,11 @@ def block_from_header_bytes(header, bytes):
     placement, dtype, shape, (extension_type, extension_values) = header
     values = pnp.deserialize(pnp.decompress(bytes, dtype), dtype,
                              copy=True).reshape(shape)
-    if extension_type == _EXTENSION_CATEGORICAL:
+    if extension_type == _CATEGORICAL:
         values = pd.Categorical.from_codes(values,
                                            extension_values[1],
                                            ordered=extension_values[0])
-    elif extension_type == _EXTENSION_DATETIME_WITH_TZ:
+    elif extension_type == _DATETIME_WITH_TZ:
         tz_info = extension_values[0]
         values = pd.DatetimeIndex(values).tz_localize('utc').tz_convert(
             tz_info)
