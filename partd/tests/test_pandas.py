@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import pytest
 pytest.importorskip('pandas')  # noqa
 
+import numpy as np
 import pandas as pd
 import pandas.util.testing as tm
 import os
@@ -92,5 +93,19 @@ def test_serialize_multi_index():
     df.index.name = 'foo'
     df.columns.name = 'bar'
 
+    df2 = deserialize(serialize(df))
+    tm.assert_frame_equal(df, df2)
+
+
+@pytest.mark.parametrize('base', [
+    pd.Timestamp('1987-03-3T01:01:01+0001'),
+    pd.Timestamp('1987-03-03 01:01:01-0600', tz='US/Central'),
+])
+def test_serialize(base):
+    df = pd.DataFrame({'x': [
+        base + pd.Timedelta(seconds=i)
+        for i in np.random.randint(0, 1000, size=10)],
+                       'y': list(range(10)),
+                       'z': pd.date_range('2017', periods=10)})
     df2 = deserialize(serialize(df))
     tm.assert_frame_equal(df, df2)
