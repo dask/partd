@@ -15,10 +15,6 @@ from .utils import extend, framesplit, frame
 
 dumps = partial(pickle.dumps, protocol=pickle.HIGHEST_PROTOCOL)
 
-_NUMPY = 'numpy_type'
-_CATEGORICAL = 'categorical_type'
-_DATETIME_WITH_TZ = 'datetime64_tz_type'
-
 
 class PandasColumns(Interface):
     def __init__(self, partd=None):
@@ -120,14 +116,14 @@ def block_to_header_bytes(block):
         from pandas.core.common import is_datetime64tz_dtype
 
     if isinstance(values, pd.Categorical):
-        extension = (_CATEGORICAL, (values.ordered, values.categories))
+        extension = ('categorical_type', (values.ordered, values.categories))
         values = values.codes
     elif is_datetime64tz_dtype(block):
         # TODO: compat with older pandas?
-        extension = (_DATETIME_WITH_TZ, (block.values.tzinfo,))
+        extension = ('datetime64_tz_type', (block.values.tzinfo,))
         values = np.asarray(values)
     else:
-        extension = (_NUMPY, ())
+        extension = ('numpy_type', ())
 
     header = (block.mgr_locs.as_array, values.dtype, values.shape, extension)
     bytes = pnp.compress(pnp.serialize(values), values.dtype)
@@ -138,11 +134,11 @@ def block_from_header_bytes(header, bytes):
     placement, dtype, shape, (extension_type, extension_values) = header
     values = pnp.deserialize(pnp.decompress(bytes, dtype), dtype,
                              copy=True).reshape(shape)
-    if extension_type == _CATEGORICAL:
+    if extension_type == 'categorical_type':
         values = pd.Categorical.from_codes(values,
                                            extension_values[1],
                                            ordered=extension_values[0])
-    elif extension_type == _DATETIME_WITH_TZ:
+    elif extension_type == 'datetime64_tz_type':
         tz_info = extension_values[0]
         values = pd.DatetimeIndex(values).tz_localize('utc').tz_convert(
             tz_info)
