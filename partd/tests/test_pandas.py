@@ -1,8 +1,5 @@
 from __future__ import absolute_import
 
-import sys
-import datetime
-
 import pytest
 pytest.importorskip('pandas')  # noqa
 
@@ -103,11 +100,7 @@ def test_serialize_multi_index():
 @pytest.mark.parametrize('base', [
     pd.Timestamp('1987-03-3T01:01:01+0001'),
     pd.Timestamp('1987-03-03 01:01:01-0600', tz='US/Central'),
-    datetime.datetime.strptime('03/Mar/1987:01:01:01 +0001',
-                               '%d/%b/%Y:%H:%M:%S %z'),
 ])
-@pytest.mark.skipif(sys.version_info < (3, 2),
-                    reason="requires python3.2+")
 def test_serialize(base):
     df = pd.DataFrame({'x': [
         base + pd.Timedelta(seconds=i)

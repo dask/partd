@@ -15,9 +15,9 @@ from .utils import extend, framesplit, frame
 
 dumps = partial(pickle.dumps, protocol=pickle.HIGHEST_PROTOCOL)
 
-_NO_EXTENSION = 0
-_EXTENSION_CATEGORICAL = 1
-_EXTENSION_DATETIME_WITH_TZ = 2
+_NO_EXTENSION = 'numpy_type'
+_EXTENSION_CATEGORICAL = 'categorical_type'
+_EXTENSION_DATETIME_WITH_TZ = 'datetime64_tz_type'
 
 
 class PandasColumns(Interface):
@@ -113,11 +113,17 @@ def index_from_header_bytes(header, bytes):
 
 def block_to_header_bytes(block):
     values = block.values
+    try:
+        # pandas >= 0.19
+        from pandas.api.types import is_datetime64tz_dtype
+    except ImportError:
+        from pandas.core.common import is_datetime64tz_dtype
+
     if isinstance(values, pd.Categorical):
         extension = (_EXTENSION_CATEGORICAL, (values.ordered,
                                               values.categories))
         values = values.codes
-    elif pd.api.types.is_datetime64tz_dtype(block):
+    elif is_datetime64tz_dtype(block):
         # TODO: compat with older pandas?
         extension = (_EXTENSION_DATETIME_WITH_TZ, (block.values.tzinfo,))
         values = np.asarray(values)
