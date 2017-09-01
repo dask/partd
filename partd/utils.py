@@ -34,7 +34,7 @@ def frame(bytes):
     """ Pack the length of the bytes in front of the bytes
 
     TODO: This does a full copy.  This should maybe be inlined somehow
-    whereever this gets used instead.  My laptop shows a data bandwidth of
+    wherever this gets used instead.  My laptop shows a data bandwidth of
     2GB/s
     """
     return struct.pack('Q', len(bytes)) + bytes
