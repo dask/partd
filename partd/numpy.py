@@ -104,7 +104,12 @@ def serialize(x):
 def deserialize(bytes, dtype, copy=False):
     if dtype == 'O':
         try:
-            blocks = [msgpack.unpackb(f, encoding='utf-8')
+            if msgpack.version >= (0, 5, 2):
+                unpack_kwargs = {'raw': False}
+            else:
+                unpack_kwargs = {'encoding': 'utf-8'}
+
+            blocks = [msgpack.unpackb(f, **unpack_kwargs)
                       for f in framesplit(bytes)]
         except Exception:
             blocks = [pickle.loads(f) for f in framesplit(bytes)]
