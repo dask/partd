@@ -4,7 +4,7 @@ from os.path import exists
 from setuptools import setup
 
 setup(name='partd',
-      version='0.3.8',
+      version='0.3.9',
       description='Appendable key-value storage',
       url='http://github.com/dask/partd/',
       maintainer='Matthew Rocklin',
