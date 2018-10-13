@@ -28,7 +28,11 @@ def dumps(x):
 
 def loads(x):
     try:
-        return msgpack.unpackb(x, encoding='utf8')
+        if msgpack.version >= (0, 5, 2):
+            unpack_kwargs = {'raw': False}
+        else:
+            unpack_kwargs = {'encoding': 'utf-8'}
+        return msgpack.unpackb(x, **unpack_kwargs)
     except:
         return pickle.loads(x)
 
