@@ -139,9 +139,7 @@ def block_from_header_bytes(header, bytes):
                                            extension_values[1],
                                            ordered=extension_values[0])
     elif extension_type == 'datetime64_tz_type':
-        tz_info = extension_values[0]
-        values = pd.DatetimeIndex(values).tz_localize('utc').tz_convert(
-            tz_info)
+        values = pd.DatetimeIndex(values)
     return make_block(values, placement=placement)
 
 
