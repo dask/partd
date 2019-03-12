@@ -119,9 +119,8 @@ def block_to_header_bytes(block):
         extension = ('categorical_type', (values.ordered, values.categories))
         values = values.codes
     elif is_datetime64tz_dtype(block):
-        # TODO: compat with older pandas?
         extension = ('datetime64_tz_type', (block.values.tzinfo,))
-        values = np.asarray(values)
+        values = values.view('i8')
     else:
         extension = ('numpy_type', ())
 
@@ -139,7 +138,8 @@ def block_from_header_bytes(header, bytes):
                                            extension_values[1],
                                            ordered=extension_values[0])
     elif extension_type == 'datetime64_tz_type':
-        values = pd.DatetimeIndex(values)
+        tz_info = extension_values[0]
+        values = pd.DatetimeIndex(values).tz_localize('utc').tz_convert(tz_info)
     return make_block(values, placement=placement)
 
 
