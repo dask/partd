@@ -105,7 +105,6 @@ def nested_get(ind, coll, lazy=False):
             return (nested_get(i, coll, lazy=lazy) for i in ind)
         else:
             return [nested_get(i, coll, lazy=lazy) for i in ind]
-        return seq
     else:
         return coll[ind]
 
