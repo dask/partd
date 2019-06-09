@@ -9,7 +9,9 @@ def bytes_concat(L):
     return b''.join(L)
 
 
-with ignoring(ImportError):
+with ignoring(ImportError, AttributeError):
+    # In case snappy is not installed, or another package called snappy that does not implement compress / decompress.
+    # For example, SnapPy (https://pypi.org/project/snappy/)
     import snappy
     Snappy = partial(Encode,
                      snappy.compress,
