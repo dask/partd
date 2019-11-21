@@ -5,13 +5,20 @@ from functools import partial
 import numpy as np
 import pandas as pd
 from pandas.core.internals import create_block_manager_from_blocks, make_block
-from pandas.api.types import is_extension_array_dtype
 
 from . import numpy as pnp
 from .core import Interface
 from .compatibility import pickle
 from .encode import Encode
 from .utils import extend, framesplit, frame
+
+
+try:
+    # pandas >= 0.24.0
+    from pandas.api.types import is_extension_array_dtype
+except ImportError:
+    def is_extension_array_dtype(dtype):
+        return False
 
 
 dumps = partial(pickle.dumps, protocol=pickle.HIGHEST_PROTOCOL)
