@@ -112,6 +112,7 @@ def test_serialize(base):
 
 
 def test_other_extension_types():
+    pytest.importorskip("pandas", minversion="0.25.0")
     a = pd.array([pd.Period("2000"), pd.Period("2001")])
     df = pd.DataFrame({"A": a})
     df2 = deserialize(serialize(df))
