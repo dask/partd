@@ -24,7 +24,7 @@ install:
   - python setup.py install
 
 script:
-    - then py.test partd --doctest-modules --verbose; else py.test partd --verbose; fi
+    - py.test partd --doctest-modules --verbose
 
 notifications:
   email: false
