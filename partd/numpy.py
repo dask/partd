@@ -17,9 +17,9 @@ def serialize_dtype(dt):
     """ Serialize dtype to bytes
 
     >>> serialize_dtype(np.dtype('i4'))
-    '<i4'
+    b'<i4'
     >>> serialize_dtype(np.dtype('M8[us]'))
-    '<M8[us]'
+    b'<M8[us]'
     """
     return dt.str.encode()
 
@@ -27,10 +27,10 @@ def serialize_dtype(dt):
 def parse_dtype(s):
     """ Parse text as numpy dtype
 
-    >>> parse_dtype('i4')
+    >>> parse_dtype(b'i4')
     dtype('int32')
 
-    >>> parse_dtype("[('a', 'i4')]")
+    >>> parse_dtype(b"[('a', 'i4')]")
     dtype([('a', '<i4')])
     """
     if s.startswith(b'['):

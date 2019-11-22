@@ -13,6 +13,14 @@ from .encode import Encode
 from .utils import extend, framesplit, frame
 
 
+try:
+    # pandas >= 0.24.0
+    from pandas.api.types import is_extension_array_dtype
+except ImportError:
+    def is_extension_array_dtype(dtype):
+        return False
+
+
 dumps = partial(pickle.dumps, protocol=pickle.HIGHEST_PROTOCOL)
 
 
@@ -121,18 +129,27 @@ def block_to_header_bytes(block):
     elif is_datetime64tz_dtype(block):
         extension = ('datetime64_tz_type', (block.values.tzinfo,))
         values = values.view('i8')
+    elif is_extension_array_dtype(block.dtype):
+        extension = ("other", ())
     else:
         extension = ('numpy_type', ())
 
     header = (block.mgr_locs.as_array, values.dtype, values.shape, extension)
-    bytes = pnp.compress(pnp.serialize(values), values.dtype)
+    if extension == ("other", ()):
+        bytes = pickle.dumps(values)
+    else:
+        bytes = pnp.compress(pnp.serialize(values), values.dtype)
     return header, bytes
 
 
 def block_from_header_bytes(header, bytes):
     placement, dtype, shape, (extension_type, extension_values) = header
-    values = pnp.deserialize(pnp.decompress(bytes, dtype), dtype,
-                             copy=True).reshape(shape)
+
+    if extension_type == "other":
+        values = pickle.loads(bytes)
+    else:
+        values = pnp.deserialize(pnp.decompress(bytes, dtype), dtype,
+                                 copy=True).reshape(shape)
     if extension_type == 'categorical_type':
         values = pd.Categorical.from_codes(values,
                                            extension_values[1],

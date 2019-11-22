@@ -212,9 +212,9 @@ def serialize_key(key):
     """
 
     >>> serialize_key('x')
-    'x'
+    b'x'
     >>> serialize_key(('a', 'b', 1))
-    'a-|-b-|-1'
+    b'a-|-b-|-1'
     """
     if isinstance(key, tuple):
         return tuple_sep.join(map(serialize_key, key))
@@ -228,10 +228,10 @@ def serialize_key(key):
 def deserialize_key(text):
     """
 
-    >>> deserialize_key('x')
-    'x'
-    >>> deserialize_key('a-|-b-|-1')
-    ('a', 'b', '1')
+    >>> deserialize_key(b'x')
+    b'x'
+    >>> deserialize_key(b'a-|-b-|-1')
+    (b'a', b'b', b'1')
     """
     if tuple_sep in text:
         return tuple(text.split(tuple_sep))

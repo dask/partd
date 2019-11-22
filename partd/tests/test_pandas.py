@@ -109,3 +109,11 @@ def test_serialize(base):
                        'z': pd.date_range('2017', periods=10)})
     df2 = deserialize(serialize(df))
     tm.assert_frame_equal(df, df2)
+
+
+def test_other_extension_types():
+    pytest.importorskip("pandas", minversion="0.25.0")
+    a = pd.array([pd.Period("2000"), pd.Period("2001")])
+    df = pd.DataFrame({"A": a})
+    df2 = deserialize(serialize(df))
+    tm.assert_frame_equal(df, df2)
