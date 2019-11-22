@@ -62,7 +62,7 @@ def partition_all(n, bytes):
     The final block holds the remainder and so may not be of equal size
 
     >>> list(partition_all(2, b'Hello'))
-    ['He', 'll', 'o']
+    [b'He', b'll', b'o']
 
     See Also:
         toolz.partition_all
