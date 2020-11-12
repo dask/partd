@@ -123,7 +123,7 @@ serialization, buffering, and remote access.::
     >>> client = Pickle(Snappy(Client(server.address)))
     >>> client.append({'x': [1, 2, 3]})
 
-.. |Build Status| image:: https://travis-ci.org/dask/partd.png
-   :target: https://travis-ci.org/dask/partd
+.. |Build Status| image:: https://github.com/dask/partd/workflows/CI/badge.svg
+   :target: https://github.com/dask/partd/actions?query=workflow%3ACI
 .. |Version Status| image:: https://img.shields.io/pypi/v/partd.svg
    :target: https://pypi.python.org/pypi/partd/
