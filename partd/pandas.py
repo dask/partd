@@ -12,12 +12,23 @@ from .compatibility import pickle
 from .encode import Encode
 from .utils import extend, framesplit, frame
 
-
 try:
     # pandas >= 0.24.0
     from pandas.api.types import is_extension_array_dtype
 except ImportError:
     def is_extension_array_dtype(dtype):
+        return False
+
+try:
+    # Some `ExtensionArray`s can have a `.dtype` which is not a `ExtensionDtype`
+    # (e.g. they can be backed by a NumPy dtype). For these cases we check
+    # whether the instance is a `ExtensionArray`.
+    # https://github.com/dask/partd/issues/48
+    from pandas.api.extensions import ExtensionArray
+    def is_extension_array(x):
+        return isinstance(x, ExtensionArray)
+except ImportError:
+    def is_extension_array(x):
         return False
 
 
@@ -129,7 +140,7 @@ def block_to_header_bytes(block):
     elif is_datetime64tz_dtype(block):
         extension = ('datetime64_tz_type', (block.values.tzinfo,))
         values = values.view('i8')
-    elif is_extension_array_dtype(block.dtype):
+    elif is_extension_array_dtype(block.dtype) or is_extension_array(values):
         extension = ("other", ())
     else:
         extension = ('numpy_type', ())
