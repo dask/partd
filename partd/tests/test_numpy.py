@@ -76,23 +76,19 @@ def test_non_utf8_bytes():
     assert (partd.numpy.deserialize(s, 'O') == a).all()
 
 
-def test_safer_eval_tuples():
-    # Test different quotation mark types.
-    assert np.dtype(safer_eval(b'[("a", "i4")]')) == np.dtype([('a', '<i4')])
-
-    assert np.dtype(safer_eval(b"[('a', 'i4')]")) == np.dtype([('a', '<i4')])
-    assert np.dtype(safer_eval(b"[('b', 'i2')]")) == np.dtype([('b', '<i2')])
-    assert np.dtype(safer_eval(b"[('c', 'f8')]")) == np.dtype([('c', '<f8')])
-
-    assert (
-        np.dtype(safer_eval(b"[('x', 'i4'), ('y', 'i4')]")) ==
-        np.dtype([('x', '<i4'), ('y', '<i4')])
-    )
-
-    assert (
-        np.dtype(safer_eval(b"[('a', 'i4'), ('b', 'i2'), ('c', 'f8')]")) ==
-        np.dtype([('a', '<i4'), ('b', '<i2'), ('c', '<f8')])
-    )
+@pytest.mark.parametrize('text,parsed', [
+    (b'[("a", "i4")]', [('a', '<i4')]), # Test different quotation mark types.
+    (b"[('a', 'i4')]", [('a', '<i4')]),
+    (b"[('b', 'i2')]", [('b', '<i2')]),
+    (b"[('c', 'f8')]", [('c', '<f8')]),
+    (b"[('x', 'i4'), ('y', 'i4')]", [('x', '<i4'), ('y', '<i4')]),
+    (
+        b"[('a', 'i4'), ('b', 'i2'), ('c', 'f8')]",
+        [('a', '<i4'), ('b', '<i2'), ('c', '<f8')],
+    ),
+])
+def test_safer_eval_tuple(text, parsed):
+    assert np.dtype(safer_eval(text)) == np.dtype(parsed)
 
 
 @pytest.mark.parametrize('text,parsed', [
