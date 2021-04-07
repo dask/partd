@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+from distutils.version import LooseVersion
 from functools import partial
 
 import numpy as np
@@ -8,10 +9,11 @@ from pandas.core.internals import create_block_manager_from_blocks, make_block
 
 from . import numpy as pnp
 from .core import Interface
-from .compatibility import pickle, PANDAS_VERSION
+from .compatibility import pickle
 from .encode import Encode
 from .utils import extend, framesplit, frame
 
+PANDAS_VERSION = LooseVersion(pd.__version__)
 
 try:
     # pandas >= 0.24.0
