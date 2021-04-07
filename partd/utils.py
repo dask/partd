@@ -1,8 +1,12 @@
-from contextlib import contextmanager
 import os
 import shutil
-import tempfile
 import struct
+import tempfile
+from contextlib import contextmanager
+from string import printable as _printable
+
+# Exclude newline and tab characters from consideration.
+printable = _printable[:-5]
 
 
 def raises(exc, lamda):
@@ -48,7 +52,6 @@ def framesplit(bytes):
     [b'Hello', b'World']
     """
     i = 0; n = len(bytes)
-    chunks = list()
     while i < n:
         nbytes = struct.unpack('Q', bytes[i:i+8])[0]
         i += 8
@@ -174,3 +177,38 @@ def extend(key, term):
         key = (key,)
 
     return key + term
+
+
+def safer_eval(source):
+    """ A safer alternative to the built-in ``eval``
+
+    The further safety is achieved via additional checks over the input.
+
+    Please, note that this is not 100% bullet-proof, as it still internally
+    relies on ``eval``.
+
+    Examples
+    --------
+
+    >>> safer_eval("1")
+    1
+    >>> safer_eval("[1, 2, 3]")
+    [1, 2, 3]
+    >>> safer_eval("['a', 'b', 'c']")
+    ['a', 'b', 'c']
+    """
+    # Preserve the original type, if it's not ``str``, but ensure that sanity
+    # checks are performed over a ``str`` representation of the input.
+    string = source if type(source) is str else str(source)
+
+    # Disallow evaluation of non-printable chracters.
+    if any(map(lambda c: c not in printable, string)):
+        raise ValueError("Cannot evaluate strings containing non-printable characters")
+
+    # Disallow evaluation of dunder/magic Python methods.
+    # Access to the latter may recover ``__builtins__``.
+    if '__' in string:
+        raise ValueError("Cannot evaluate strings containing '__'")
+
+    # Disallow ``__builtins__`` (e.g., ``__import__``, etc.).
+    return eval(source, {'__builtins__': {}})
