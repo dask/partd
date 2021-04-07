@@ -1,6 +1,5 @@
 from __future__ import absolute_import
 
-from distutils.version import LooseVersion
 from functools import partial
 
 import numpy as np
@@ -13,8 +12,6 @@ from .compatibility import pickle
 from .encode import Encode
 from .utils import extend, framesplit, frame
 
-PANDAS_VERSION = LooseVersion(pd.__version__)
-
 try:
     # pandas >= 0.24.0
     from pandas.api.types import is_extension_array_dtype
@@ -22,7 +19,7 @@ except ImportError:
     def is_extension_array_dtype(dtype):
         return False
 
-if PANDAS_VERSION >= "1.3.0":
+try:
     # Some `ExtensionArray`s can have a `.dtype` which is not a `ExtensionDtype`
     # (e.g. they can be backed by a NumPy dtype). For these cases we check
     # whether the instance is a `ExtensionArray`.
@@ -30,7 +27,7 @@ if PANDAS_VERSION >= "1.3.0":
     from pandas.api.extensions import ExtensionArray
     def is_extension_array(x):
         return isinstance(x, ExtensionArray)
-else:
+except ImportError:
     def is_extension_array(x):
         return False
 
