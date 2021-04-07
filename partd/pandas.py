@@ -8,7 +8,7 @@ from pandas.core.internals import create_block_manager_from_blocks, make_block
 
 from . import numpy as pnp
 from .core import Interface
-from .compatibility import pickle
+from .compatibility import pickle, PANDAS_VERSION
 from .encode import Encode
 from .utils import extend, framesplit, frame
 
@@ -18,6 +18,18 @@ try:
     from pandas.api.types import is_extension_array_dtype
 except ImportError:
     def is_extension_array_dtype(dtype):
+        return False
+
+if PANDAS_VERSION >= "1.3.0":
+    # Some `ExtensionArray`s can have a `.dtype` which is not a `ExtensionDtype`
+    # (e.g. they can be backed by a NumPy dtype). For these cases we check
+    # whether the instance is a `ExtensionArray`.
+    # https://github.com/dask/partd/issues/48
+    from pandas.api.extensions import ExtensionArray
+    def is_extension_array(x):
+        return isinstance(x, ExtensionArray)
+else:
+    def is_extension_array(x):
         return False
 
 
@@ -129,7 +141,7 @@ def block_to_header_bytes(block):
     elif is_datetime64tz_dtype(block):
         extension = ('datetime64_tz_type', (block.values.tzinfo,))
         values = values.view('i8')
-    elif is_extension_array_dtype(block.dtype):
+    elif is_extension_array_dtype(block.dtype) or is_extension_array(values):
         extension = ("other", ())
     else:
         extension = ('numpy_type', ())
