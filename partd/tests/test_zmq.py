@@ -54,7 +54,7 @@ def dont_test_flow_control():
         held_append.start()
 
         sleep(0.1)
-        assert held_append.isAlive()  # held!
+        assert held_append.is_alive()  # held!
 
         assert not s._frozen_sockets.empty()
 
@@ -64,7 +64,7 @@ def dont_test_flow_control():
         free_frozen_sockets_thread.start()
 
         sleep(0.2)
-        assert not held_append.isAlive()
+        assert not held_append.is_alive()
         assert s._frozen_sockets.empty()
     finally:
         s.close()
