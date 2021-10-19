@@ -1,7 +1,6 @@
 """
 get/put functions that consume/produce Python lists using Pickle to serialize
 """
-from __future__ import absolute_import
 import pickle
 
 from .encode import Encode

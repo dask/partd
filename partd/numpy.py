@@ -4,7 +4,6 @@ We put arrays on disk as raw bytes, extending along the first dimension.
 Alongside each array x we ensure the value x.dtype which stores the string
 description of the array's dtype.
 """
-from __future__ import absolute_import
 import pickle
 import numpy as np
 from toolz import valmap, identity, partial
