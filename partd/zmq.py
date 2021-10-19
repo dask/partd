@@ -20,7 +20,6 @@ from .dict import Dict
 from .file import File
 from .buffer import Buffer
 from . import core
-from .compatibility import Queue, Empty, unicode
 from .utils import ignoring
 
 
@@ -50,7 +49,7 @@ class Server(object):
 
         if hostname is None:
             hostname = socket.gethostname()
-        if isinstance(bind, unicode):
+        if isinstance(bind, str):
             bind = bind.encode()
         if bind is None:
             port = self.socket.bind_to_random_port('tcp://*')

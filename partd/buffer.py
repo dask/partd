@@ -4,7 +4,7 @@ from toolz import merge_with, topk, accumulate, pluck
 from operator import add
 from bisect import bisect
 from collections import defaultdict
-from .compatibility import Queue, Empty
+from queue import Queue, Empty
 
 
 def zero():

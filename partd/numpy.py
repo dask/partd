@@ -5,9 +5,9 @@ Alongside each array x we ensure the value x.dtype which stores the string
 description of the array's dtype.
 """
 from __future__ import absolute_import
+import pickle
 import numpy as np
 from toolz import valmap, identity, partial
-from .compatibility import pickle
 from .core import Interface
 from .file import File
 from .utils import frame, framesplit, suffix, ignoring
