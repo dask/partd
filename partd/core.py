@@ -42,7 +42,7 @@ def token(key):
         return str(key)
 
 
-class Interface(object):
+class Interface:
     def __init__(self):
         self._iset_seen = set()
 

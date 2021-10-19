@@ -55,7 +55,7 @@ class File(Interface):
                 try:
                     with open(self.filename(key), 'rb') as f:
                         result.append(f.read())
-                except IOError:
+                except OSError:
                     result.append(b'')
         finally:
             if lock:

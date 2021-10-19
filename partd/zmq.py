@@ -34,7 +34,7 @@ def logerrors():
         raise
 
 
-class Server(object):
+class Server:
     def __init__(self, partd=None, bind=None, start=True, block=False,
             hostname=None):
         self.context = zmq.Context()
@@ -317,7 +317,7 @@ class Client(Interface):
         self.close()
 
 
-class NotALock(object):
+class NotALock:
     def acquire(self): pass
     def release(self): pass
 

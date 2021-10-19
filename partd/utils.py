@@ -116,8 +116,7 @@ def flatten(seq):
     """
     for item in seq:
         if isinstance(item, list):
-            for item2 in flatten(item):
-                yield item2
+            yield from flatten(item)
         else:
             yield item
 
