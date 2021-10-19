@@ -8,7 +8,7 @@ from time import sleep, time
 from toolz import accumulate, topk, pluck, merge, keymap
 import uuid
 from collections import defaultdict
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from threading import Thread, Lock
 from datetime import datetime
 from multiprocessing import Process
@@ -18,7 +18,6 @@ from .dict import Dict
 from .file import File
 from .buffer import Buffer
 from . import core
-from .utils import ignoring
 
 
 tuple_sep = b'-|-'
@@ -170,9 +169,9 @@ class Server(object):
         logger.debug('Server closes')
         self.status = 'closed'
         self.block()
-        with ignoring(zmq.error.ZMQError):
+        with suppress(zmq.error.ZMQError):
             self.socket.close(1)
-        with ignoring(zmq.error.ZMQError):
+        with suppress(zmq.error.ZMQError):
             self.context.destroy(3)
         self.partd.lock.release()
 
@@ -302,12 +301,12 @@ class Client(Interface):
 
     def close(self):
         if hasattr(self, 'server_process'):
-            with ignoring(zmq.error.ZMQError):
+            with suppress(zmq.error.ZMQError):
                 self.close_server()
             self.server_process.join()
-        with ignoring(zmq.error.ZMQError):
+        with suppress(zmq.error.ZMQError):
             self.socket.close(1)
-        with ignoring(zmq.error.ZMQError):
+        with suppress(zmq.error.ZMQError):
             self.context.destroy(1)
 
     def __exit__(self, type, value, traceback):

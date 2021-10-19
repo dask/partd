@@ -4,12 +4,14 @@ We put arrays on disk as raw bytes, extending along the first dimension.
 Alongside each array x we ensure the value x.dtype which stores the string
 description of the array's dtype.
 """
+from contextlib import suppress
 import pickle
+
 import numpy as np
 from toolz import valmap, identity, partial
 from .core import Interface
 from .file import File
-from .utils import frame, framesplit, suffix, ignoring
+from .utils import frame, framesplit, suffix
 
 
 def serialize_dtype(dt):
@@ -93,7 +95,7 @@ except ImportError:
 def serialize(x):
     if x.dtype == 'O':
         l = x.flatten().tolist()
-        with ignoring(Exception):  # Try msgpack (faster on strings)
+        with suppress(Exception):  # Try msgpack (faster on strings)
             return frame(msgpack.packb(l, use_bin_type=True))
         return frame(pickle.dumps(l, protocol=pickle.HIGHEST_PROTOCOL))
     else:
@@ -131,7 +133,7 @@ decompress_text = identity
 compress_bytes = lambda bytes, itemsize: bytes
 decompress_bytes = identity
 
-with ignoring(ImportError):
+with suppress(ImportError):
     import blosc
     blosc.set_nthreads(1)
 
@@ -141,7 +143,7 @@ with ignoring(ImportError):
     compress_text = partial(blosc.compress, typesize=1)
     decompress_text = blosc.decompress
 
-with ignoring(ImportError):
+with suppress(ImportError):
     from snappy import compress as compress_text
     from snappy import decompress as decompress_text
 

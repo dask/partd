@@ -1,4 +1,5 @@
 import atexit
+from contextlib import suppress
 import os
 import shutil
 import string
@@ -6,7 +7,6 @@ import tempfile
 
 from .core import Interface
 import locket
-from .utils import ignoring
 
 
 class File(Interface):
@@ -19,7 +19,7 @@ class File(Interface):
             self._explicitly_given_path = True
         self.path = path
         if not os.path.exists(path):
-            with ignoring(OSError):
+            with suppress(OSError):
                 os.makedirs(path)
         self.lock = locket.lock_file(self.filename('.lock'))
         Interface.__init__(self)
