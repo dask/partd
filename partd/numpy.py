@@ -5,12 +5,15 @@ Alongside each array x we ensure the value x.dtype which stores the string
 description of the array's dtype.
 """
 from __future__ import absolute_import
+
+from toolz import identity, partial, valmap
+
 import numpy as np
-from toolz import valmap, identity, partial
+
 from .compatibility import pickle
 from .core import Interface
 from .file import File
-from .utils import frame, framesplit, suffix, ignoring
+from .utils import frame, framesplit, ignoring, safer_eval, suffix
 
 
 def serialize_dtype(dt):
@@ -34,7 +37,7 @@ def parse_dtype(s):
     dtype([('a', '<i4')])
     """
     if s.startswith(b'['):
-        return np.dtype(eval(s))  # Dangerous!
+        return np.dtype(safer_eval(s))
     else:
         return np.dtype(s)
 

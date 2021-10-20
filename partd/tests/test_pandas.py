@@ -1,14 +1,17 @@
 from __future__ import absolute_import
 
+import os
+
 import pytest
-pytest.importorskip('pandas')  # noqa
 
 import numpy as np
 import pandas as pd
-import pandas.util.testing as tm
-import os
+import pandas.testing as tm
+from partd.pandas import PandasBlocks, PandasColumns, deserialize, serialize
 
-from partd.pandas import PandasColumns, PandasBlocks, serialize, deserialize
+pytest.importorskip('pandas')  # noqa
+
+
 
 
 df1 = pd.DataFrame({'a': [1, 2, 3],

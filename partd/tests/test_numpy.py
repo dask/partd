@@ -1,12 +1,16 @@
 from __future__ import absolute_import
 
-import pytest
-np = pytest.importorskip('numpy')  # noqa
-
 import pickle
 
+import pytest
+
 import partd
-from partd.numpy import Numpy
+from partd.numpy import Numpy, parse_dtype
+from partd.utils import safer_eval
+
+np = pytest.importorskip('numpy')  # noqa
+
+
 
 
 def test_numpy():
@@ -70,3 +74,42 @@ def test_non_utf8_bytes():
                   b'\xf0\x28\x8c\xbc'], dtype='O')
     s = partd.numpy.serialize(a)
     assert (partd.numpy.deserialize(s, 'O') == a).all()
+
+
+@pytest.mark.parametrize('text,parsed', [
+    (b'[("a", "i4")]', [('a', '<i4')]), # Test different quotation mark types.
+    (b"[('a', 'i4')]", [('a', '<i4')]),
+    (b"[('b', 'i2')]", [('b', '<i2')]),
+    (b"[('c', 'f8')]", [('c', '<f8')]),
+    (b"[('x', 'i4'), ('y', 'i4')]", [('x', '<i4'), ('y', '<i4')]),
+    (
+        b"[('a', 'i4'), ('b', 'i2'), ('c', 'f8')]",
+        [('a', '<i4'), ('b', '<i2'), ('c', '<f8')],
+    ),
+])
+def test_safer_eval_tuple(text, parsed):
+    assert np.dtype(safer_eval(text)) == np.dtype(parsed)
+
+
+@pytest.mark.parametrize('text,parsed', [
+    (b'a', 'S'),
+    (b'b', 'int8'),
+    (b'c', 'S1'),
+    (b'i2', 'int16'),
+    (b'i4', 'int32'),
+    (b'f8', 'float64'),
+    (b'M8[us]', '<M8[us]'),
+    (b'M8[s]', '<M8[s]'),
+    (b'datetime64[D]', '<M8[D]'),
+    (b'timedelta64[25s]', '<m8[25s]'),
+    (
+        b"i4, (2,3)f8",
+        [('f0', '<i4'), ('f1', '<f8', (2, 3))],
+    ),
+    (
+        b"[('a', 'i4'), ('b', 'i2'), ('c', 'f8')]",
+        [('a', '<i4'), ('b', '<i2'), ('c', '<f8')],
+    ),
+])
+def test_parse_dtype(text, parsed):
+    assert parse_dtype(text) == np.dtype(parsed)
