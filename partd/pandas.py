@@ -1,6 +1,5 @@
-from __future__ import absolute_import
-
 from functools import partial
+import pickle
 
 import numpy as np
 import pandas as pd
@@ -8,7 +7,6 @@ from pandas.core.internals import create_block_manager_from_blocks, make_block
 
 from . import numpy as pnp
 from .core import Interface
-from .compatibility import pickle
 from .encode import Encode
 from .utils import extend, framesplit, frame
 
@@ -47,11 +45,11 @@ class PandasColumns(Interface):
 
         # TODO: don't use values, it does some work.  Look at _blocks instead
         #       pframe/cframe do this well
-        arrays = dict((extend(k, col), df[col].values)
+        arrays = {extend(k, col): df[col].values
                        for k, df in data.items()
-                       for col in df.columns)
-        arrays.update(dict((extend(k, '.index'), df.index.values)
-                            for k, df in data.items()))
+                       for col in df.columns}
+        arrays.update({extend(k, '.index'): df.index.values
+                            for k, df in data.items()})
         # TODO: handle categoricals
         self.partd.append(arrays, **kwargs)
 

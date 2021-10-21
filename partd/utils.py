@@ -74,19 +74,6 @@ def partition_all(n, bytes):
             yield bytes[i: i+n]
 
 
-@contextmanager
-def ignoring(*exc):
-    try:
-        yield
-    except exc:
-        pass
-
-
-@contextmanager
-def do_nothing(*args, **kwargs):
-    yield
-
-
 def nested_get(ind, coll, lazy=False):
     """ Get nested index from collection
 
@@ -129,8 +116,7 @@ def flatten(seq):
     """
     for item in seq:
         if isinstance(item, list):
-            for item2 in flatten(item):
-                yield item2
+            yield from flatten(item)
         else:
             yield item
 

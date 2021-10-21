@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 import os
 import shutil
 import locket
@@ -44,7 +42,7 @@ def token(key):
         return str(key)
 
 
-class Interface(object):
+class Interface:
     def __init__(self):
         self._iset_seen = set()
 

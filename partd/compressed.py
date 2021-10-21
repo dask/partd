@@ -1,6 +1,7 @@
-from .utils import ignoring
-from .encode import Encode
+from contextlib import suppress
 from functools import partial
+
+from .encode import Encode
 
 __all__ = []
 
@@ -9,7 +10,7 @@ def bytes_concat(L):
     return b''.join(L)
 
 
-with ignoring(ImportError, AttributeError):
+with suppress(ImportError, AttributeError):
     # In case snappy is not installed, or another package called snappy that does not implement compress / decompress.
     # For example, SnapPy (https://pypi.org/project/snappy/)
     import snappy
@@ -20,7 +21,7 @@ with ignoring(ImportError, AttributeError):
     __all__.append('Snappy')
 
 
-with ignoring(ImportError):
+with suppress(ImportError):
     import zlib
     ZLib = partial(Encode,
                    zlib.compress,
@@ -29,7 +30,7 @@ with ignoring(ImportError):
     __all__.append('ZLib')
 
 
-with ignoring(ImportError):
+with suppress(ImportError):
     import bz2
     BZ2 = partial(Encode,
                   bz2.compress,
@@ -38,7 +39,7 @@ with ignoring(ImportError):
     __all__.append('BZ2')
 
 
-with ignoring(ImportError):
+with suppress(ImportError):
     import blosc
     Blosc = partial(Encode,
                     blosc.compress,

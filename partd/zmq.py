@@ -1,5 +1,3 @@
-from __future__ import absolute_import, print_function
-
 import zmq
 import logging
 from itertools import chain
@@ -10,7 +8,7 @@ from time import sleep, time
 from toolz import accumulate, topk, pluck, merge, keymap
 import uuid
 from collections import defaultdict
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from threading import Thread, Lock
 from datetime import datetime
 from multiprocessing import Process
@@ -20,8 +18,6 @@ from .dict import Dict
 from .file import File
 from .buffer import Buffer
 from . import core
-from .compatibility import Queue, Empty, unicode
-from .utils import ignoring
 
 
 tuple_sep = b'-|-'
@@ -38,7 +34,7 @@ def logerrors():
         raise
 
 
-class Server(object):
+class Server:
     def __init__(self, partd=None, bind=None, start=True, block=False,
             hostname=None):
         self.context = zmq.Context()
@@ -50,7 +46,7 @@ class Server(object):
 
         if hostname is None:
             hostname = socket.gethostname()
-        if isinstance(bind, unicode):
+        if isinstance(bind, str):
             bind = bind.encode()
         if bind is None:
             port = self.socket.bind_to_random_port('tcp://*')
@@ -173,9 +169,9 @@ class Server(object):
         logger.debug('Server closes')
         self.status = 'closed'
         self.block()
-        with ignoring(zmq.error.ZMQError):
+        with suppress(zmq.error.ZMQError):
             self.socket.close(1)
-        with ignoring(zmq.error.ZMQError):
+        with suppress(zmq.error.ZMQError):
             self.context.destroy(3)
         self.partd.lock.release()
 
@@ -305,12 +301,12 @@ class Client(Interface):
 
     def close(self):
         if hasattr(self, 'server_process'):
-            with ignoring(zmq.error.ZMQError):
+            with suppress(zmq.error.ZMQError):
                 self.close_server()
             self.server_process.join()
-        with ignoring(zmq.error.ZMQError):
+        with suppress(zmq.error.ZMQError):
             self.socket.close(1)
-        with ignoring(zmq.error.ZMQError):
+        with suppress(zmq.error.ZMQError):
             self.context.destroy(1)
 
     def __exit__(self, type, value, traceback):
@@ -321,7 +317,7 @@ class Client(Interface):
         self.close()
 
 
-class NotALock(object):
+class NotALock:
     def acquire(self): pass
     def release(self): pass
 

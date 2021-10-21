@@ -4,8 +4,7 @@ to serialize.
 
 First we try msgpack (it's faster).  If that fails then we default to pickle.
 """
-from __future__ import absolute_import
-from .compatibility import pickle
+import pickle
 
 try:
     from pandas import msgpack
