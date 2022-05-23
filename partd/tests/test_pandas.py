@@ -3,7 +3,7 @@ pytest.importorskip('pandas')  # noqa
 
 import numpy as np
 import pandas as pd
-import pandas.util.testing as tm
+import pandas.testing as tm
 import os
 
 from partd.pandas import PandasColumns, PandasBlocks, serialize, deserialize
