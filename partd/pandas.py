@@ -108,7 +108,7 @@ def index_to_header_bytes(ind):
         cat = None
         values = ind.values
 
-    header = (type(ind), ind._get_attributes_dict(), values.dtype, cat)
+    header = (type(ind), {k: getattr(ind, k, None) for k in ind._attributes}, values.dtype, cat)
     bytes = pnp.compress(pnp.serialize(values), values.dtype)
     return header, bytes
 
