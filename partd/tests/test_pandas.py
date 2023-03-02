@@ -115,3 +115,19 @@ def test_other_extension_types():
     df = pd.DataFrame({"A": a})
     df2 = deserialize(serialize(df))
     tm.assert_frame_equal(df, df2)
+
+@pytest.mark.parametrize("dtype", ["Int64", "Int32", "Float64", "Float32"])
+def test_index_numeric_extension_types(dtype):
+    pytest.importorskip("pandas", minversion="1.2.0")
+
+    df = pd.DataFrame({"x": [1, 2, 3]}, index=[4, 5, 6])
+    df.index = df.index.astype(dtype)
+    df2 = deserialize(serialize(df))
+    tm.assert_frame_equal(df, df2)
+    
+def test_index_non_numeric_extension_types():
+    pytest.importorskip("pandas", minversion="1.3.0")
+    df = pd.DataFrame({"x": [1, 2, 3]}, index=["a", "b", "c"])
+    df.index = df.index.astype("string[python]")
+    df2 = deserialize(serialize(df))
+    tm.assert_frame_equal(df, df2)
