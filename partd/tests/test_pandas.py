@@ -6,6 +6,11 @@ import pandas as pd
 import pandas.testing as tm
 import os
 
+try:
+    import pyarrow as pa
+except ImportError:
+    pa = None
+
 from partd.pandas import PandasColumns, PandasBlocks, serialize, deserialize
 
 
@@ -113,5 +118,31 @@ def test_other_extension_types():
     pytest.importorskip("pandas", minversion="0.25.0")
     a = pd.array([pd.Period("2000"), pd.Period("2001")])
     df = pd.DataFrame({"A": a})
+    df2 = deserialize(serialize(df))
+    tm.assert_frame_equal(df, df2)
+
+@pytest.mark.parametrize("dtype", ["Int64", "Int32", "Float64", "Float32"])
+def test_index_numeric_extension_types(dtype):
+    pytest.importorskip("pandas", minversion="1.4.0")
+
+    df = pd.DataFrame({"x": [1, 2, 3]}, index=[4, 5, 6])
+    df.index = df.index.astype(dtype)
+    df2 = deserialize(serialize(df))
+    tm.assert_frame_equal(df, df2)
+    
+@pytest.mark.parametrize(
+    "dtype",
+    [
+        "string[python]",
+        pytest.param(
+            "string[pyarrow]",
+            marks=pytest.mark.skipif(pa is None, reason="Requires pyarrow"),
+        ),
+    ],
+)
+def test_index_non_numeric_extension_types(dtype):
+    pytest.importorskip("pandas", minversion="1.4.0")
+    df = pd.DataFrame({"x": [1, 2, 3]}, index=["a", "b", "c"])
+    df.index = df.index.astype(dtype)
     df2 = deserialize(serialize(df))
     tm.assert_frame_equal(df, df2)

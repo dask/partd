@@ -108,6 +108,9 @@ def index_to_header_bytes(ind):
         cat = None
         values = ind.values
 
+    if is_extension_array_dtype(ind):
+        return None, dumps(ind)
+
     header = (type(ind), {k: getattr(ind, k, None) for k in ind._attributes}, values.dtype, cat)
     bytes = pnp.compress(pnp.serialize(values), values.dtype)
     return header, bytes
