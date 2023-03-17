@@ -183,7 +183,7 @@ def serialize(df):
     headers = [col_header, ind_header]
     bytes = [col_bytes, ind_bytes]
 
-    for block in df._data.blocks:
+    for block in df._mgr.blocks:
         h, b = block_to_header_bytes(block)
         headers.append(h)
         bytes.append(b)
