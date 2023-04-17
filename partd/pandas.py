@@ -129,16 +129,10 @@ def index_from_header_bytes(header, bytes):
 
 def block_to_header_bytes(block):
     values = block.values
-    try:
-        # pandas >= 0.19
-        from pandas.api.types import is_datetime64tz_dtype
-    except ImportError:
-        from pandas.core.common import is_datetime64tz_dtype
-
     if isinstance(values, pd.Categorical):
         extension = ('categorical_type', (values.ordered, values.categories))
         values = values.codes
-    elif is_datetime64tz_dtype(block):
+    elif isinstance(block, pd.DatetimeTZDtype):
         extension = ('datetime64_tz_type', (block.values.tzinfo,))
         values = values.view('i8')
     elif is_extension_array_dtype(block.dtype) or is_extension_array(values):
