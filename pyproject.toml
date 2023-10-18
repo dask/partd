@@ -19,8 +19,11 @@ classifiers = [
 readme = "README.rst"
 urls = {Homepage = "http://github.com/dask/partd/"}
 requires-python = ">=3.7"
-dependencies = ["file: requirements.txt"]
 dynamic = ["version"]
+dependencies = [
+    "locket",
+    "toolz",
+]
 
 [project.optional-dependencies]
 complete = [
