@@ -29,7 +29,9 @@ jobs:
 
       - name: Install nightly deps
         shell: bash -l {0}
-        run: pip install --pre -U --no-deps --index-url https://pypi.anaconda.org/scientific-python-nightly-wheels/simple numpy pandas
+        run: |
+          pip install --pre -U --no-deps --index-url https://pypi.anaconda.org/scientific-python-nightly-wheels/simple numpy pandas
+          pip install --pre -U --no-deps --index-url https://pypi.fury.io/arrow-nightlies/ pyarrow
 
       - name: Install
         shell: bash -l {0}
