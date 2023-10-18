@@ -1,0 +1,40 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    name: Upstream
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v2
+
+      - name: Setup Conda Environment
+        uses: conda-incubator/setup-miniconda@v2.2.0
+        with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          use-mamba: true
+          channel-priority: strict
+          python-version: "3.11"
+          auto-activate-base: false
+
+      - name: Install dependencies
+        shell: bash -l {0}
+        run: mamba install pytest locket numpy toolz pandas blosc pyzmq pyarrow -c conda-forge
+
+      - name: Install nightly deps
+        shell: bash -l {0}
+        run: pip install --pre -U --no-deps --index-url https://pypi.anaconda.org/scientific-python-nightly-wheels/simple numpy pandas
+
+      - name: Install
+        shell: bash -l {0}
+        run: python setup.py install
+
+      - name: Run Tests
+        shell: bash -l {0}
+        run: pytest partd --verbose
