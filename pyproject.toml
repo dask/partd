@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=61.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "partd"
+description = "Appendable key-value storage"
+maintainers = [{name = "Matthew Rocklin", email = "mrocklin@gmail.com"}]
+license = {text = "BSD"}
+keywords = []
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+readme = "README.rst"
+urls = {Homepage = "http://github.com/dask/partd/"}
+requires-python = ">=3.7"
+dependencies = ["file: requirements.txt"]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+complete = [
+    "numpy >= 1.9.0",
+    "pandas >=0.19.0",
+    "pyzmq",
+    "blosc",
+]
+
+[tool.setuptools]
+packages = ["partd"]
+zip-safe = false
+include-package-data = false
+
+[tool.versioneer]
+vcs = "git"
+style = "pep440"
+versionfile_source = "partd/_version.py"
+versionfile_build = "partd/_version.py"
+tag_prefix = ""
+parentdir_prefix = "partd-"
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers --strict-config"
+filterwarnings = ["error"]
