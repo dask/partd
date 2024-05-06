@@ -1,36 +1,38 @@
 from functools import partial
 import pickle
 
-import numpy as np
 import pandas as pd
-from pandas.core.internals import create_block_manager_from_blocks, make_block
+from packaging.version import Version
+
+PANDAS_GE_210 = Version(pd.__version__).release >= (2, 1, 0)
+PANDAS_GE_300 =  Version(pd.__version__).major >= 3
+
+if PANDAS_GE_300:
+    from pandas.api.internals import create_dataframe_from_blocks
+    create_block_manager_from_blocks = None
+    make_block = None
+else:
+    create_dataframe_from_blocks = None
+    try:
+        from pandas.core.internals.managers import create_block_manager_from_blocks
+    except ImportError:
+        from pandas.core.internals import create_block_manager_from_blocks
+
+    from pandas.core.internals import make_block
 
 from . import numpy as pnp
 from .core import Interface
 from .encode import Encode
 from .utils import extend, framesplit, frame
+from pandas.api.types import is_extension_array_dtype
+from pandas.api.extensions import ExtensionArray
 
-try:
-    # pandas >= 0.24.0
-    from pandas.api.types import is_extension_array_dtype
-except ImportError:
-    def is_extension_array_dtype(dtype):
-        return False
-
-try:
-    # Some `ExtensionArray`s can have a `.dtype` which is not a `ExtensionDtype`
-    # (e.g. they can be backed by a NumPy dtype). For these cases we check
-    # whether the instance is a `ExtensionArray`.
-    # https://github.com/dask/partd/issues/48
-    from pandas.api.extensions import ExtensionArray
-    def is_extension_array(x):
-        return isinstance(x, ExtensionArray)
-except ImportError:
-    def is_extension_array(x):
-        return False
+def is_extension_array(x):
+    return isinstance(x, ExtensionArray)
 
 
 dumps = partial(pickle.dumps, protocol=pickle.HIGHEST_PROTOCOL)
+
 
 
 class PandasColumns(Interface):
@@ -148,7 +150,7 @@ def block_to_header_bytes(block):
     return header, bytes
 
 
-def block_from_header_bytes(header, bytes):
+def block_from_header_bytes(header, bytes, create_block: bool):
     placement, dtype, shape, (extension_type, extension_values) = header
 
     if extension_type == "other":
@@ -164,7 +166,9 @@ def block_from_header_bytes(header, bytes):
         tz_info = extension_values[0]
         values = pd.DatetimeIndex(values).tz_localize('utc').tz_convert(
             tz_info)
-    return make_block(values, placement=placement)
+    if create_block:
+        return make_block(values, placement=placement)
+    return values, placement
 
 
 def serialize(df):
@@ -193,9 +197,14 @@ def deserialize(bytes):
     bytes = frames[1:]
     axes = [index_from_header_bytes(headers[0], bytes[0]),
             index_from_header_bytes(headers[1], bytes[1])]
-    blocks = [block_from_header_bytes(h, b)
+    blocks = [block_from_header_bytes(h, b, create_block=not PANDAS_GE_300)
               for (h, b) in zip(headers[2:], bytes[2:])]
-    return pd.DataFrame(create_block_manager_from_blocks(blocks, axes))
+    if PANDAS_GE_300:
+        return pd.api.internals.create_dataframe_from_blocks(blocks, axes[1], axes[0])
+    elif PANDAS_GE_210:
+        return pd.DataFrame._from_mgr(create_block_manager_from_blocks(blocks, axes), axes=axes)
+    else:
+        return pd.DataFrame(create_block_manager_from_blocks(blocks, axes))
 
 
 def join(dfs):
