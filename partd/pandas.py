@@ -9,7 +9,7 @@ PANDAS_GE_300 =  Version(pd.__version__).major >= 3
 
 if PANDAS_GE_300:
     from pandas.api.internals import create_dataframe_from_blocks
-    create_block_manager_from_blocks= None
+    create_block_manager_from_blocks = None
     make_block = None
 else:
     create_dataframe_from_blocks = None
