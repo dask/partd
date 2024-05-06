@@ -35,13 +35,7 @@ jobs:
 
       - name: Run Tests
         shell: bash -l {0}
-        run: |
-          set -ex
-          if [ $PYTHON_VERSION == "3.7" ]; then
-            pytest partd --doctest-modules --verbose
-          else
-            pytest partd --verbose
-          fi
+        run: pytest partd --doctest-modules --verbose
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
 
