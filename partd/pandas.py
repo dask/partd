@@ -12,6 +12,7 @@ if PANDAS_GE_300:
     create_block_manager_from_blocks= None
     make_block = None
 else:
+    create_dataframe_from_blocks = None
     try:
         from pandas.core.internals.managers import create_block_manager_from_blocks
     except ImportError:
