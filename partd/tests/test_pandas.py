@@ -146,3 +146,17 @@ def test_index_non_numeric_extension_types(dtype):
     df.index = df.index.astype(dtype)
     df2 = deserialize(serialize(df))
     tm.assert_frame_equal(df, df2)
+
+
+def test_categorical_concat():
+    pytest.importorskip("pandas", minversion="2")
+
+    df1 = pd.DataFrame({"a": ["x", "y"]}, dtype="category")
+    df2 = pd.DataFrame({"a": ["y", "z"]}, dtype="category")
+
+    with PandasBlocks() as p:
+        p.append({'x': df1})
+        p.append({'x': df2})
+
+        result = p.get(["x"])
+        pd.testing.assert_frame_equal(result[0], pd.concat([df1, df2]).astype("category"))
