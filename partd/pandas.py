@@ -216,8 +216,8 @@ def join(dfs):
             col: "category"
             for col in result.columns
             if (
-                pd.api.types.is_categorical_dtype(dfs[0][col].dtype)
-                and not pd.api.types.is_categorical_dtype(result[col].dtype)
+                isinstance(dfs[0][col].dtype, pd.CategoricalDtype)
+                and not isinstance(result[col].dtype, pd.CategoricalDtype)
             )
         }
         if dtypes:
