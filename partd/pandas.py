@@ -211,6 +211,17 @@ def join(dfs):
     if not dfs:
         return pd.DataFrame()
     else:
-        return pd.concat(dfs)
+        result = pd.concat(dfs)
+        dtypes = {
+            col: "category"
+            for col in result.columns
+            if (
+                isinstance(dfs[0][col].dtype, pd.CategoricalDtype)
+                and not isinstance(result[col].dtype, pd.CategoricalDtype)
+            )
+        }
+        if dtypes:
+            result = result.astype(dtypes)
+        return result
 
 PandasBlocks = partial(Encode, serialize, deserialize, join)
