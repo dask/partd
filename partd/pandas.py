@@ -47,10 +47,10 @@ class PandasColumns(Interface):
 
         # TODO: don't use values, it does some work.  Look at _blocks instead
         #       pframe/cframe do this well
-        arrays = {extend(k, col): df[col].values
+        arrays = {extend(k, col): df[col].to_numpy()
                        for k, df in data.items()
                        for col in df.columns}
-        arrays.update({extend(k, '.index'): df.index.values
+        arrays.update({extend(k, '.index'): df.index.to_numpy()
                             for k, df in data.items()})
         # TODO: handle categoricals
         self.partd.append(arrays, **kwargs)
