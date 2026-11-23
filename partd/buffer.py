@@ -50,8 +50,8 @@ class Buffer(Interface):
     def _get(self, keys, lock=True, **kwargs):
         if lock: self.lock.acquire()
         try:
-            result = list(map(add, self.fast.get(keys, lock=False),
-                                   self.slow.get(keys, lock=False)))
+            result = list(map(add, self.slow.get(keys, lock=False),
+                                   self.fast.get(keys, lock=False)))
         finally:
             if lock: self.lock.release()
         return result

@@ -52,3 +52,12 @@ def test_pickle():
             assert d.fast.data == c.fast.data
             assert hasattr(d, 'slow')
             assert d.slow.path == c.slow.path
+
+
+def test_append_order_across_spill(tmp_path):
+    with Buffer(Dict(), File(str(tmp_path)), available_memory=5) as p:
+        p.append({'x': b'first-'})
+        p.append({'x': b'next'})
+        assert p.get('x') == b'first-next'
+        p.flush()
+        assert p.get('x') == b'first-next'
